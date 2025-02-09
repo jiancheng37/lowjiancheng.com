@@ -1,7 +1,6 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { Link } from 'react-router-dom';  // For navigation to different sections
 
 const Welcome: React.FC = () => {
   return (
@@ -13,30 +12,33 @@ const Welcome: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
+      alignItems: 'center', // Ensures proper centering on all devices
     }}>
       <Typography variant="h2" sx={{
         fontWeight: 'bold',
-        fontSize: '3rem',
+        fontSize: { xs: '2rem', sm: '3rem', md: '4rem' }, // Adjust for smaller screens
         fontFamily: 'monospace',
       }}>
-        hi, my name is
+        Hi, I am 
       </Typography>
       <Typography variant="h1" sx={{
         fontWeight: 'bold',
-        fontSize: '10rem',
-        color: '#ffc2ff', // Lighter color for the name
+        fontSize: { xs: '3rem', sm: '6rem'}, // Adjusts dynamically
+        color: '#ffc2ff',
         marginTop: 2,
+        whiteSpace: 'nowrap', // Prevents wrapping on large screens
+        overflow: 'hidden',
       }}>
-        jian cheng
+        JIAN CHENG
       </Typography>
       <Typography sx={{
         fontWeight: 'normal',
-        fontSize: '2rem',
+        fontSize: { xs: '1.2rem', sm: '2rem' }, // Reduce font size for mobile
         fontFamily: 'monospace',
-        marginTop: 8,
-        color: '#a3a3a3', // Light gray color for the tagline
+        marginTop: { xs: 4, sm: 8 }, // Reduce spacing on smaller screens
+        color: '#a3a3a3',
       }}>
-        welcome to my humble abode!
+        Welcome to my website!
       </Typography>
     </Box>
   );

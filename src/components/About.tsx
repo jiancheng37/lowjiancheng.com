@@ -1,24 +1,12 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { styled } from '@mui/material/styles';
+import { autocompleteClasses } from '@mui/material';
 
-// Styled component for the image to make it circular
-const ProfileImage = styled('img')({
-  borderRadius: '50%',
-  borderColor: '#ffc2ff',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  width: '400px',
-  height: '400px',
-  objectFit: 'cover',
-  marginRight: '100px',
-});
-
-// Update the component to use React.forwardRef
 const About = React.forwardRef<HTMLDivElement>((props, ref) => {
   return (
     <div ref={ref}>
+      {/* Heading */}
       <Box
         sx={{
           display: 'flex',
@@ -29,45 +17,69 @@ const About = React.forwardRef<HTMLDivElement>((props, ref) => {
       >
         <Typography
           sx={{
-            fontSize: '3rem',
+            fontSize: { xs: '1.25rem', md: '3rem' }, // Adjust heading size for mobile
             fontWeight: 'bold',
           }}
         >
-          <span style={{ color: '#ffc2ff' }}>&lt;</span> about me{' '}
+          <span style={{ color: '#ffc2ff' }}>&lt;</span> About Me{' '}
           <span style={{ color: '#ffc2ff' }}>&gt;</span>
         </Typography>
       </Box>
+
+      {/* Content */}
       <Box
         sx={{
           display: 'flex',
+          flexDirection: { xs: 'column', md: 'row'}, // Stacks on small screens
           alignItems: 'center',
           justifyContent: 'center',
           padding: 4,
-          textAlign: 'left',
+          textAlign: { xs: 'left', md: 'left' },
+          width: { xs: '80%', md: '70%' },
+          margin: 'auto'
         }}
       >
-        <ProfileImage src="./profile-photo.jpg" alt="Your Name" />
+        {/* Image */}
+        <Box
+          component="img"
+          src="./profile-photo.jpg"
+          alt="Your Name"
+          sx={{
+            borderRadius: '50%',
+            borderColor: '#ffc2ff',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            width: '40%',
+            maxWidth: { xs: '160px', md: '400px' },
+            height: 'auto',
+            objectFit: 'cover',
+            marginRight: { xs: '0px', md: '100px',  },
+            marginBottom: { xs: '20px', md: '0px' },
+          }}
+        />
+
+        {/* Text */}
         <Box sx={{ maxWidth: '500px' }}>
           <Typography
             sx={{
               marginTop: 2,
-              color: '#E5E4E2',
+              color: '#E5E4E2', 
               fontFamily: 'monospace',
-              fontSize: '1.2rem',
               lineHeight: 1.8,
+              fontSize: { xs: '0.65rem', sm: '0.9rem', md: '1rem', lg: '1.1rem' }, // Adjust font size for mobile
               letterSpacing: '0.05em',
             }}
           >
-            i'm a year 2 computer science student at the{' '}
+            I'm a Year 2 Computer Science student at the{' '}
             <a
               href="https://www.nus.edu.sg"
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#ffc2ff', textDecoration: 'underline' }}
             >
-              national university of singapore
+              National University of Singapore
             </a>
-            . i aspire to be a software developer, with a particular passion
+            . I aspire to be a software developer, with a particular passion
             for backend technologies.
           </Typography>
           <Typography
@@ -75,16 +87,26 @@ const About = React.forwardRef<HTMLDivElement>((props, ref) => {
               marginTop: 2,
               color: '#E5E4E2',
               fontFamily: 'monospace',
-              fontSize: '1.2rem',
               lineHeight: 1.8,
+              fontSize: { xs: '0.65rem', sm: '0.9rem', md: '1rem', lg: '1.1rem' }, // Adjust font size for mobile
               letterSpacing: '0.05em',
             }}
           >
-            but there's much more to me than the softwares i write! outside of
-            programming, you can find me attempting to get fit at the gym,
-            watching video essays on youtube or working on personal projects.
-            currently, i am on a mission to find the cafe that sells the best
-            matcha latte in singapore!
+            But there's much more to me than the softwares I write! Outside of
+            programming, you can find me attempting to get fit at the gym
+            (<span style={{ fontStyle: "italic" }}>keyword: attempting</span>),
+            watching video essays on YouTube (<span style={{ fontStyle: "italic" }}>I love watching </span> {' '}
+              <a
+              href="https://www.youtube.com/@veritasium"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#ffc2ff', textDecoration: 'underline', fontStyle: "italic"}}
+            >
+              Veritasium
+            </a>
+            !), or working on personal projects.
+            Currently, I am on a mission to find the cafe that sells the best
+            matcha latte in Singapore!
           </Typography>
         </Box>
       </Box>

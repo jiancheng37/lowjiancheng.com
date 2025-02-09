@@ -8,6 +8,7 @@ import Experience from "./components/Experience";
 import Skills from "./components/Skills";
 import Socials from "./components/Socials";
 import Projects from "./components/Projects";
+import Footer from "./components/Footer";
 
 const theme = createTheme({
   palette: {
@@ -28,9 +29,17 @@ const App: React.FC = () => {
         <div className="app-container">
           <Navbar
             onNavigate={(section: string) => {
-              if (section === 'about') aboutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              if (section === 'experience') experienceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              if (section === 'skills') skillsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              const yOffset = -80; // Adjust based on navbar height
+              let element = null;
+
+              if (section === 'about') element = aboutRef.current;
+              if (section === 'experience') element = experienceRef.current;
+              if (section === 'skills') element = skillsRef.current;
+
+              if (element) {
+                const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+              }
             }}
           />
           <Welcome />
@@ -39,11 +48,7 @@ const App: React.FC = () => {
           <Projects />
           <Skills ref={skillsRef}/>
           <Socials />
-          <main>
-            <Routes>
-              {/* Add your route definitions here */}
-            </Routes> 
-          </main>
+          <Footer />
         </div>
       </Router>
     </ThemeProvider>

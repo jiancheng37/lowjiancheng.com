@@ -10,12 +10,13 @@ interface SkillsCardProps {
         <Box sx={{
             backgroundColor: '#ffc2ff',
             borderRadius: '10%',
-            padding: '10px',
-            marginLeft: '30px'
+            padding: { xs: '5px', md: '8px' },
+            marginLeft: '5px',
         }}>
             <Typography sx={{
                 color: '#494d5f',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                fontSize: { xs: '0.65rem', sm: '0.9rem', md: '1rem', lg: '1.1rem' }, // Adjust font size for mobile
             }}>
                 {name}
             </Typography>

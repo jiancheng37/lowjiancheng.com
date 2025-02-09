@@ -3,7 +3,6 @@ import { styled } from '@mui/material/styles';
 import ProfileCard from "./ProfileCard";
 import SchoolIcon from '@mui/icons-material/School';
 import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import WorkIcon from '@mui/icons-material/Work';
 import React from "react";
 
@@ -14,76 +13,84 @@ const Experience = React.forwardRef<HTMLDivElement>((props, ref) => {
                 display: 'flex',
                 justifyContent: 'center',
                 color: '#E5E4E2',
+                padding: 2, // Adds spacing for mobile
             }}>
                 <Typography sx={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold'
+                    fontSize: { xs: '1.25rem', md: '3rem' }, // Responsive font size
+                    fontWeight: 'bold',
+                    textAlign: 'center', // Centers text on small screens
                 }}>
-                    <span style={{ color: '#ffc2ff' }}>&lt;</span> experience <span style={{ color: '#ffc2ff' }}>&gt;</span>
+                    <span style={{ color: '#ffc2ff' }}>&lt;</span> Experience <span style={{ color: '#ffc2ff' }}>&gt;</span>
                 </Typography>
             </Box>
             <ProfileCard
                 icon={WorkIcon}
-                title="nus fintech lab"
-                subtitle="software engineer intern"
+                title="NUS Fintech Lab"
+                subtitle="Software Engineer Intern"
+                time="August 2024 - January 2025"
                 descriptionItems={[
-                    'developed a real-world asset tokenization project leveraging blockchain to streamline real estate investment',
-                    'architected a full-stack solution utilizing the xrp ledger to enable secure tokenization and fractionalization of real estate assets',
-                    'project was selected for demonstration at ubri connect 2024 international conference to showcase real world asset tokenization',
+                    "Developed a real-world asset tokenisation project leveraging blockchain to streamline real estate investment.",
+                    "Architected a full-stack solution to enable secure tokenization and fractionalisation of real estate assets.",
                 ]}
             />
             <ProfileCard
                 icon={SchoolIcon}
-                title="nus computer science"
-                subtitle="uni student"
+                title="NUS Computer Science"
+                subtitle="University Student"
+                time="May 2024 - Present"
                 descriptionItems={[
-                    'decided i am an avid pain enjoyer',
-                    'okay real reason i switched is because i realised the business side of information systems did not excite me at all'
+                    "Decided I am an avid pain enjoyer.",
+                    "Okay, the real reason I switched is because I realized the business side of Information Systems did not excite me at all.",
                 ]}
             />
             <ProfileCard
                 icon={SchoolIcon}
-                title="nus information systems"
-                subtitle="uni student"
+                title="NUS Information Systems"
+                subtitle="University Student"
+                time="August 2023 - May 2024"
                 descriptionItems={[
-                    'decided that i am a pain enjoyer',
-                    `somehow ended up on this guy's list though... think his name was dean`
+                    "Decided that I am a pain enjoyer.",
+                    "Somehow ended up on this guy's list though... Think his name was Dean.",
                 ]}
             />
             <ProfileCard
                 icon={LocalPoliceIcon}
-                title="special operations command (singapore police force)"
-                subtitle="staff assistant to comms and computer department"
+                title="Special Operations Command (Singapore Police Force)"
+                subtitle="Staff Assistant to Communications & Computer Department"
+                time="April 2021 - April 2023"
                 descriptionItems={[
-                    'essentially slaved for 2 years',
-                    'though i did meet some very cool people and saw first-hand how things are ran in the police force'
+                    "Essentially slaved for two years.",
+                    "Though I did meet some very cool people and saw firsthand how things are run in the police force.",
                 ]}
             />
             <ProfileCard
                 icon={WorkIcon}
-                title="freelance"
-                subtitle="h2 mathematics private tutor"
+                title="Freelance"
+                subtitle="H2 Mathematics Private Tutor"
+                time="December 2020 - December 2022"
                 descriptionItems={[
-                    'taught 7 students how to add, subtract, multiply and divide',
-                    'really happy that all my students improved their grades under my guidance',
-                    `but also realised that teaching wasn't a viable career path for me as i found it too repetitive`
+                    "Taught seven students how to add, subtract, multiply, and divide.",
+                    "Really happy that all my students improved their grades under my guidance.",
+                    "But I also realized that teaching wasn't a viable career path for me as I found it too repetitive.",
                 ]}
             />
             <ProfileCard
                 icon={SchoolIcon}
-                title="hwa chong junior college"
-                subtitle="jc student"
+                title="Hwa Chong Junior College"
+                subtitle="JC Student"
+                time="January 2019 - December 2020"
                 descriptionItems={[
-                    'thought that i would have been bottom of the barrel, but i held my own surprisingly well',
-                    'think the greatest achievement in jc was that i survived covid'
+                    "Thought that I would have been at the bottom of the barrel, but I held my own surprisingly well.",
+                    "I think my greatest achievement in JC was surviving COVID-19.",
                 ]}
             />
             <ProfileCard
                 icon={SchoolIcon}
-                title="st. joseph's institution"
-                subtitle="secondary school student"
+                title="St. Joseph's Institution"
+                subtitle="Secondary School Student"
+                time="January 2015 - December 2018"
                 descriptionItems={[
-                    'best 4 years of my life',
+                    "The best four years of my life.",
                 ]}
             />
         </div>
