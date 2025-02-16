@@ -30,7 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           alignItems: 'center',
           borderBottom: '2px solid white',
           padding: 2,
-          width: '70%',
+          maxWidth: '80%',
           margin: 'auto',
           borderRadius: 1,
           color: '#E5E4E2',
@@ -44,17 +44,25 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           fontWeight: 'bold',
         }}
       >
-        <Box sx={{ display: 'flex', flex: 1, justifyContent: 'flex-start' }}>
-          <Box component="img" src="/logo.png" alt="logo" 
-              sx={{ width: 60, height: 'auto'}} />
+        {/* Logo on the Left */}
+        <Box 
+          sx={{ display: 'flex', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Box 
+            component="img" 
+            src="/logo.png" 
+            alt="logo" 
+            sx={{ width: 60, height: 'auto' }} 
+          />
         </Box>
         {/* Centered Navigation Links */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', whiteSpace: 'nowrap', flex: 1, gap: 6}}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', whiteSpace: 'nowrap', flex: 1, gap: { xs: 5, lg: 8 }}}>
           {['about', 'experience', 'skills'].map((section) => (
             <Box
               key={section}
               sx={{
-                fontWeight: 'bold',
+                fontSize: { xs: 15, lg: 18 },
                 cursor: 'pointer',
                 padding: '8px 12px',
                 transition: 'color 0.3s ease',
@@ -69,7 +77,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
         </Box>
 
         {/* Social Icons on the Right */}
-        <Box sx={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end' }}>  
+        <Box sx={{ display: 'flex', gap: { xs: 1, lg: 1.5 }, flex: 1, justifyContent: 'flex-end' }}>  
           <IconButton component="a" href="/resume.pdf" target="_blank" rel="noopener noreferrer" sx={{ color: '#ffc2ff' }}>
             <ArticleIcon />
           </IconButton>
@@ -99,12 +107,19 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           color: '#E5E4E2',
         }}
       >
-        <IconButton onClick={toggleDrawer(true)} sx={{ display: 'flex', flexGrow: 1, color: '#E5E4E2', justifyContent: 'flex-start' }}>
-          <MenuIcon fontSize="medium" />
+        <IconButton sx={{ display: 'flex', flexGrow: 1, color: '#E5E4E2', justifyContent: 'flex-start' }}>
+          <MenuIcon onClick={toggleDrawer(true)} fontSize="medium" />
         </IconButton>
-        <Box sx={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
-          <Box component="img" src="/logo.png" alt="logo" 
-              sx={{ width: 40, height: 'auto' }} />
+        <Box 
+          sx={{ display: 'flex', justifyContent: 'center', flex: 1, cursor: 'pointer' }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Box 
+            component="img" 
+            src="/logo.png" 
+            alt="logo" 
+            sx={{ width: 40, height: 'auto' }} 
+          />
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end',  flexGrow: 1, }}>
           <IconButton component="a" href="/resume.pdf" target="_blank" rel="noopener noreferrer" sx={{ color: '#ffc2ff' }}>
