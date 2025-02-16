@@ -44,7 +44,10 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           fontWeight: 'bold',
         }}
       >
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ display: 'flex', flex: 1, justifyContent: 'flex-start' }}>
+          <Box component="img" src="/logo.png" alt="logo" 
+              sx={{ width: 60, height: 'auto'}} />
+        </Box>
         {/* Centered Navigation Links */}
         <Box sx={{ display: 'flex', justifyContent: 'center', whiteSpace: 'nowrap', flex: 1, gap: 6}}>
           {['about', 'experience', 'skills'].map((section) => (
@@ -66,7 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
         </Box>
 
         {/* Social Icons on the Right */}
-        <Box sx={{ display: 'flex', gap: 1, flex: 1, justifyContent: 'flex-end' }}>  
+        <Box sx={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end' }}>  
           <IconButton component="a" href="/resume.pdf" target="_blank" rel="noopener noreferrer" sx={{ color: '#ffc2ff' }}>
             <ArticleIcon />
           </IconButton>
@@ -96,9 +99,18 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           color: '#E5E4E2',
         }}
       >
-        <IconButton onClick={toggleDrawer(true)} sx={{ color: '#E5E4E2' }}>
-          <MenuIcon fontSize="large" />
+        <IconButton onClick={toggleDrawer(true)} sx={{ display: 'flex', flexGrow: 1, color: '#E5E4E2', justifyContent: 'flex-start' }}>
+          <MenuIcon fontSize="medium" />
         </IconButton>
+        <Box sx={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
+          <Box component="img" src="/logo.png" alt="logo" 
+              sx={{ width: 40, height: 'auto' }} />
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end',  flexGrow: 1, }}>
+          <IconButton component="a" href="/resume.pdf" target="_blank" rel="noopener noreferrer" sx={{ color: '#ffc2ff' }}>
+            <ArticleIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Drawer (Sidebar) for Mobile Navigation */}

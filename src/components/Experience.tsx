@@ -1,5 +1,4 @@
 import { Box, Typography } from "@mui/material";
-import { styled } from '@mui/material/styles';
 import ProfileCard from "./ProfileCard";
 import SchoolIcon from '@mui/icons-material/School';
 import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
