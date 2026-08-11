@@ -1,0 +1,247 @@
+/* ══ projects — cinematic quest dossier ═══════════════════════════════════
+   One build owns the panel: a tipped plate and its project details.
+   Wheel / arrows step quests; edges hand off the page. */
+.section--projects {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 10px;
+  background-color: color-mix(in srgb, var(--color-accent) 5%, var(--paper-ground));
+  background-image:
+    radial-gradient(
+      110% 75% at 20% 70%,
+      color-mix(in srgb, var(--color-accent) 7%, transparent),
+      transparent 55%
+    ),
+    var(--paper-atmosphere);
+  border-block: 1px solid var(--color-divider);
+}
+.projects-head {
+  flex: 0 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.projects-head .section-title { margin: 8px 0 4px; }
+.projects-head .section-subtitle {
+  margin: 0 auto;
+  max-width: 52ch;
+  font-size: 14px;
+}
+
+.quest-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.quest-frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(1080px, 100%);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: clamp(28px, 3.5vw, 48px);
+  align-items: center;
+}
+.quest-media {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.quest-media-nav,
+.quest-media-tabs { display: none; }
+.quest-plate-wrap {
+  width: 100%;
+  max-height: 100%;
+}
+.quest-plate-hint {
+  margin: 24px 0 0;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  font-feature-settings: 'tnum';
+}
+.quest-stack {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: min(40vh, 400px);
+}
+.quest-stack.is-shufflable { cursor: pointer; }
+.quest-stack.is-shufflable:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 8px;
+}
+.quest-plate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-shadow:
+    0 22px 40px -26px rgba(32, 28, 22, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  transition: filter 260ms ease, box-shadow 320ms ease;
+}
+.quest-plate-wrap:hover .quest-stack:not(.is-shufflable) .quest-plate,
+.quest-plate-wrap:hover .quest-stack .quest-plate.is-top {
+  box-shadow:
+    0 34px 56px -26px rgba(32, 28, 22, 0.6),
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+.quest-plate .plate-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+.quest-body {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+.quest-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-feature-settings: 'tnum';
+}
+.quest-label {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+.quest-count {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.quest-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: clamp(28px, 3.2vw, 40px);
+  margin: 0 0 12px;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+.quest-desc {
+  margin: 0 0 16px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--color-neutral-700);
+  max-width: 34ch;
+}
+.quest-tags { margin-bottom: 20px; }
+.quest-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.quest-links .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.quest-nav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.quest-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 96px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-divider);
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+.quest-nav-btn:hover {
+  color: var(--color-accent-700);
+  border-color: var(--color-accent);
+}
+.quest-nav-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.quest-track {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 520px;
+  border-top: 1px solid var(--color-divider);
+}
+.quest-track-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px 0;
+  margin: 0;
+  border: 0;
+  border-top: 2px solid transparent;
+  margin-top: -1px;
+  background: none;
+  color: var(--color-neutral-600);
+  cursor: pointer;
+  text-align: left;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+.quest-track-item:hover { color: var(--color-text); }
+.quest-track-item.is-active {
+  color: var(--color-accent-700);
+  border-top-color: var(--color-accent-700);
+}
+.quest-track-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.quest-track-no {
+  font-feature-settings: 'tnum';
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.quest-track-name {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+

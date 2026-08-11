@@ -1,0 +1,252 @@
+/* ══ about — the name as a dictionary entry ═══════════════════════════════ */
+.entry-pair {
+  --grid-x: 50%;
+  --grid-y: 50%;
+  /* The headword rule lands 62px from the top: -4 + (3 × 22) = 62. */
+  --grid-offset-y: -4px;
+  position: relative;
+  isolation: isolate;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  /* heavier top rule, like a dictionary column head */
+  border-top: 1px solid var(--color-text);
+  border-bottom: 1px solid var(--color-divider);
+  flex: 0 1 auto;
+  min-height: 0;
+  cursor: none;
+}
+.entry-pair,
+.entry-pair * {
+  cursor: none;
+}
+.entry-tabs { display: none; }
+/* Soft graph-paper wash — fades toward the edges so it stays behind the type. */
+.entry-pair::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--color-surface) 30%, transparent);
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-text) 9%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-text) 9%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 22px 22px;
+  background-position: -5px var(--grid-offset-y);
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent),
+    linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  mask-image:
+    linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent),
+    linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  opacity: 0.7;
+  transition: opacity 280ms ease;
+}
+/* Cursor lantern — denser ruled cell + ink wash that snaps to the paper grid. */
+.entry-pair::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-text) 22%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-text) 22%, transparent) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle 18px at var(--grid-x) var(--grid-y),
+      color-mix(in srgb, var(--color-surface) 65%, transparent),
+      transparent 70%
+    );
+  background-size: 22px 22px, 22px 22px, auto;
+  background-position:
+    -1px var(--grid-offset-y),
+    -1px var(--grid-offset-y),
+    0 0;
+  -webkit-mask-image: radial-gradient(
+    circle 130px at var(--grid-x) var(--grid-y),
+    #000 0%,
+    #000 28%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    circle 130px at var(--grid-x) var(--grid-y),
+    #000 0%,
+    #000 28%,
+    transparent 72%
+  );
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.entry-pair.is-tracking::before { opacity: 0.85; }
+.entry-pair.is-tracking::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .entry-pair::after { display: none; }
+  .entry-pair.is-tracking::before { opacity: 0.7; }
+}
+.entry {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 28px;
+}
+.entry--left {
+  padding: 28px 32px 28px 0;
+  border-right: 1px solid var(--color-divider);
+}
+.entry--right { padding: 28px 0 28px 32px; }
+.entry-glyph {
+  position: relative;
+  font-family: 'Cormorant Garamond', 'Songti SC', 'Noto Serif SC', serif;
+  font-size: clamp(88px, 9vw, 120px); line-height: 0.8; text-align: center;
+  color: var(--color-accent-700);
+}
+/* Offset duplicate behind the face — extruded slab, not a glow. */
+.entry-glyph-extrude {
+  display: none;
+}
+.entry-glyph-face {
+  position: relative;
+}
+/* Stroke-by-stroke variant: the SVG carries the mark, so drop the type metrics. */
+.entry-glyph--drawn {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-size: 0;
+  line-height: 1;
+}
+.glyph-writer {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+.glyph-writer:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 6px;
+}
+.glyph-writer-back,
+.glyph-writer-host,
+.glyph-writer-back svg,
+.glyph-writer-host svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Same stroke paths, nudged down-right and a shade darker. */
+.glyph-writer-back {
+  display: none;
+}
+.glyph-writer-host {
+  position: relative;
+  z-index: 1;
+}
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.headword {
+  display: flex; align-items: baseline; gap: 12px;
+  padding-bottom: 8px; margin-bottom: 12px;
+}
+.headword-pinyin { font-family: var(--font-heading); font-weight: 600; font-size: 22px; }
+.headword-ipa {
+  font-family: ui-monospace, monospace; font-size: 12px;
+  color: var(--color-neutral-600);
+  white-space: nowrap; /* a transcription must never break mid-token */
+}
+.pronounce {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  padding: 0;
+  border: 1px solid var(--color-divider);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-accent-700);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.pronounce:hover {
+  opacity: 1;
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.pronounce:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.pronounce.is-speaking {
+  opacity: 1;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  animation: pronouncePulse 900ms ease-in-out infinite;
+}
+@keyframes pronouncePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pronounce.is-speaking { animation: none; }
+}
+.headword-spacer { flex: 1; }
+.headword-pos { font-style: italic; font-size: 13px; color: var(--color-neutral-700); }
+.senses { margin: 0 0 12px; padding-left: 20px; font-size: 15px; line-height: 1.55; }
+.senses li + li { margin-top: 3px; }
+.gloss { font-style: italic; color: var(--color-neutral-600); }
+.note {
+  font-size: 12.5px; line-height: 1.5; color: var(--color-neutral-600);
+  border-left: 1px solid var(--color-accent); padding-left: 12px;
+}
+.note-label {
+  display: block; margin-bottom: 2px;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+.note-toggle { display: none; }
+.about-closing {
+  margin-top: 28px;
+  max-width: 62ch;
+  margin-inline: auto;
+  text-align: center;
+  flex: 0 0 auto;
+}
+.about-para {
+  hyphens: auto; text-wrap: pretty;
+  font-size: 15.5px; line-height: 1.65; margin: 0;
+  text-align: center;
+  color: var(--color-neutral-700);
+}
+

@@ -1,0 +1,108 @@
+/* ══ org note — the slip that opens off a chapter logo ════════════════════ */
+.org-note-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--color-text) 42%, transparent);
+  backdrop-filter: blur(2px);
+}
+.org-note {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(80vh, 620px);
+  overflow-y: auto;
+  padding: 34px 38px 32px;
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-divider);
+  outline: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  outline-offset: 5px;
+  box-shadow: 0 26px 60px color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+.org-note:focus { outline-color: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.org-note-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-neutral-600);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.org-note-close:hover {
+  color: var(--color-accent-700);
+  border-color: var(--color-divider);
+}
+.org-note-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.org-note-logo {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+.org-note-heading { min-width: 0; }
+.org-note-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 1.2;
+  margin: 0 0 5px;
+  color: var(--color-text);
+}
+.org-note-meta {
+  margin: 0;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--color-neutral-600);
+}
+.org-note-facts {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 16px 0 0;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.org-note-facts dt { color: var(--color-neutral-600); }
+.org-note-facts dd { margin: 0; color: var(--color-accent-700); }
+.org-note-blurb {
+  margin: 14px 0 0;
+  font-size: 15.5px;
+  line-height: 1.72;
+  color: var(--color-neutral-800);
+  text-wrap: pretty;
+}
+.org-note-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 20px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-700);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  padding-bottom: 2px;
+}
+.org-note-link:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+@media (max-width: 767px) {
+  .org-note { padding: 28px 24px 26px; }
+  .org-note-name { font-size: 21px; }
+}

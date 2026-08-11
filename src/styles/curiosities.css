@@ -1,0 +1,473 @@
+/* ══ curiosities — all interests visible; click one to open its panel ══════ */
+.section--curiosities {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  text-align: center;
+}
+.curiosity-head {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+.curiosity-head .section-title { margin: 10px 0 4px; }
+.curiosity-head .section-subtitle {
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 0;
+}
+
+/* Shared editorial header rhythm for every content section. */
+.chapters-head,
+.work-head,
+.projects-head,
+.curiosity-head {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-inline: auto;
+  margin-bottom: clamp(20px, 2.5vh, 30px);
+  text-align: center;
+}
+.chapters-head .section-title,
+.work-head .section-title,
+.projects-head .section-title,
+.curiosity-head .section-title {
+  margin: 10px 0 6px;
+}
+.chapters-head .section-subtitle,
+.work-head .section-subtitle,
+.projects-head .section-subtitle,
+.curiosity-head .section-subtitle {
+  margin: 0 auto;
+}
+.curiosity-stage {
+  --curiosity-gutter: clamp(40px, 4.5vw, 64px);
+  /* Side columns match so the middle sits truly between equal flanks. */
+  --curiosity-side-col: clamp(220px, 19vw, 270px);
+  --curiosity-dial-col: var(--curiosity-side-col);
+  --curiosity-figure-col: var(--curiosity-side-col);
+  /* Plate (3:4) + gold offset pad + reserved caption band. */
+  --curiosity-caption-h: 88px;
+  --curiosity-panel-h: calc(
+    var(--curiosity-figure-col) * 4 / 3 + 14px + var(--curiosity-caption-h)
+  );
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  min-height: 0;
+  display: grid;
+  /* Dial | copy | plate — one gutter, equal side columns. */
+  grid-template-columns:
+    var(--curiosity-dial-col)
+    minmax(0, 1fr)
+    var(--curiosity-figure-col);
+  column-gap: var(--curiosity-gutter);
+  /* Keep the equal-height band centered in the stage, not pinned to the top. */
+  align-content: center;
+  align-items: center;
+  text-align: left;
+}
+.curiosity-mobile-nav,
+.curiosity-mobile-nav-wrap { display: none; }
+/* Open instrument bezel — same height as copy + plate; dial centered inside. */
+.curiosity-tuner {
+  position: relative;
+  grid-column: 1;
+  justify-self: stretch;
+  align-self: center;
+  width: 100%;
+  height: var(--curiosity-panel-h);
+  min-height: var(--curiosity-panel-h);
+  max-height: var(--curiosity-panel-h);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 18px 20px;
+  isolation: isolate;
+}
+.curiosity-tuner-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.curiosity-tuner-wash {
+  position: absolute;
+  inset: 12% 10%;
+  border-radius: 42% / 20%;
+  background:
+    radial-gradient(
+      65% 75% at 45% 50%,
+      color-mix(in srgb, var(--color-accent) 12%, transparent),
+      color-mix(in srgb, var(--color-accent) 3%, transparent) 55%,
+      transparent 78%
+    );
+  opacity: 0.9;
+}
+.curiosity-tuner-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-accent-700));
+  border-style: solid;
+  opacity: 0.75;
+}
+.curiosity-tuner-corner--tl {
+  top: 2px; left: 2px;
+  border-width: 1.5px 0 0 1.5px;
+}
+.curiosity-tuner-corner--tr {
+  top: 2px; right: 2px;
+  border-width: 1.5px 1.5px 0 0;
+}
+.curiosity-tuner-corner--bl {
+  bottom: 2px; left: 2px;
+  border-width: 0 0 1.5px 1.5px;
+}
+.curiosity-tuner-corner--br {
+  bottom: 2px; right: 2px;
+  border-width: 0 1.5px 1.5px 0;
+}
+.curiosity-tuner-plate {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 4px;
+  text-align: center;
+}
+.curiosity-tuner-plate-kicker {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.curiosity-tuner-plate-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--color-accent-700);
+}
+/* Sideways dial — vertical arc opening right, slight tilt. */
+.curiosity-dial {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 220px;
+  /* Extra right room so station labels sit inside the bezel. */
+  padding: 4px 28px 4px 0;
+  box-sizing: border-box;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  outline: none;
+  transform: rotate(-3deg);
+  transform-origin: 35% 50%;
+}
+.curiosity-dial.is-dragging { cursor: grabbing; }
+.curiosity-dial:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 6px;
+}
+.curiosity-dial-face {
+  position: relative;
+  width: 100%;
+}
+.curiosity-dial-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.curiosity-dial-arc {
+  stroke: color-mix(in srgb, var(--color-accent) 72%, var(--color-neutral-400));
+}
+.curiosity-dial-arc--glass {
+  stroke: color-mix(in srgb, var(--color-accent) 8%, var(--color-neutral-100));
+  opacity: 0.55;
+}
+.curiosity-dial-arc--inner {
+  stroke: color-mix(in srgb, var(--color-accent) 28%, var(--color-divider));
+  stroke-dasharray: 2 5;
+}
+.curiosity-dial-tick {
+  stroke: color-mix(in srgb, var(--color-accent) 55%, var(--color-neutral-500));
+  transition: stroke 180ms ease;
+}
+.curiosity-dial-tick.is-active {
+  stroke: var(--color-accent-700);
+}
+.curiosity-dial-needle {
+  transform-origin: 0 0;
+  transition: transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.curiosity-dial-needle.is-instant { transition: none; }
+.curiosity-dial-needle line {
+  stroke: var(--color-accent-700);
+}
+.curiosity-dial-hub {
+  fill: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg));
+  stroke: var(--color-accent-700);
+  stroke-width: 1.5;
+}
+.curiosity-dial-hub-dot {
+  fill: var(--color-accent-700);
+  stroke: none;
+}
+.curiosity-dial-stations {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.curiosity-dial-station {
+  position: absolute;
+  display: block;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-neutral-600);
+  cursor: pointer;
+  font: inherit;
+  pointer-events: auto;
+  transform: translate(6px, -50%) rotate(3deg);
+  transition: color 180ms ease;
+  text-align: left;
+}
+.curiosity-dial-station:hover { color: var(--color-text); }
+.curiosity-dial-station.is-active {
+  color: var(--color-accent-700);
+  font-weight: 600;
+}
+.curiosity-dial-station:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.curiosity-dial-call {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+/* Spans copy + figure columns; inner grid reuses the same gutter + figure width. */
+.curiosity-panel {
+  grid-column: 2 / -1;
+  align-self: center;
+  min-width: 0;
+  height: var(--curiosity-panel-h);
+  min-height: var(--curiosity-panel-h);
+  max-height: var(--curiosity-panel-h);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.curiosity-panel > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.curiosity-panel-inner {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  /* Mirror stage tracks 2–3 so both gutters stay identical. */
+  grid-template-columns: minmax(0, 1fr) var(--curiosity-figure-col);
+  column-gap: var(--curiosity-gutter);
+  align-items: stretch;
+}
+.curiosity-now {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 10px;
+}
+.curiosity-now-kicker {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.curiosity-now-title {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-accent-700);
+  letter-spacing: 0.04em;
+}
+.curiosity-figure {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  justify-self: stretch;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.curiosity-figure > .plate-offset-wrap {
+  flex: 0 0 auto;
+  width: 100%;
+}
+/* Keep natural 3:4 — columns match height; the photo itself does not stretch. */
+.curiosity-stack {
+  width: 100%;
+  flex: 0 0 auto;
+}
+.curiosity-plate {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+/* Must beat .curiosity-plate { position: relative } or cards collapse to borders. */
+.curiosity-stack .hero-stack-card {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+}
+.curiosity-plate .plate-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center center;
+}
+/* Caption band is reserved — long/short labels must not resize the middle copy. */
+.curiosity-figure .hero-figcaption {
+  flex: 0 0 var(--curiosity-caption-h);
+  height: var(--curiosity-caption-h);
+  min-height: var(--curiosity-caption-h);
+  max-height: var(--curiosity-caption-h);
+  margin-top: 0;
+  padding-top: 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  overflow: hidden;
+}
+.curiosity-figure .caption-italic {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 0;
+}
+.curiosity-plate--empty {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-accent) 12%, var(--color-neutral-100)),
+      var(--color-neutral-100) 55%,
+      color-mix(in srgb, var(--color-divider) 80%, transparent)
+    );
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 35%, var(--color-divider));
+}
+.curiosity-plate-hint {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.curiosity-copy {
+  min-width: 0;
+  /* 10% wider than the previous measure, still centered in its track. */
+  width: 93.5%;
+  max-width: 93.5%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  justify-self: center;
+}
+/* Keep “Now playing” + title fixed; only the body scrolls. */
+.curiosity-copy-pin {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 4px;
+  background: transparent;
+}
+.curiosity-copy-scroll-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.curiosity-copy-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-right: 4px;
+  padding-bottom: 8px;
+}
+.curiosity-copy-scroll::-webkit-scrollbar { display: none; width: 0; }
+/* Soft bottom fade — cues that the body keeps going. */
+.curiosity-copy-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--paper-ground) 0%, transparent),
+    var(--paper-ground) 88%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.curiosity-copy.has-more .curiosity-copy-fade { opacity: 1; }
+.curiosity-read-more { display: none; }
+.curiosity-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: clamp(26px, 2.8vw, 34px);
+  margin: 0 0 10px;
+  color: var(--color-accent-700);
+}
+.curiosity-body {
+  margin: 0 0 1em;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-neutral-700);
+  text-wrap: pretty;
+}
+.curiosity-body:last-child { margin-bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .curiosity-dial-tick,
+  .curiosity-dial-station {
+    transition: color 160ms ease;
+  }
+}
+

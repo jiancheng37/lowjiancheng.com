@@ -1,0 +1,305 @@
+/* ══ work ═════════════════════════════════════════════════════════════════
+   Head stays put; the three punch-card slips share the leftover viewport as
+   one equal-height row. Dense copy is sized to fit — no inner scroll, no
+   overflow climbing over the title. */
+.section--work {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 14px;
+  overflow-y: hidden;
+  /* Wide ledger — slips need more horizontal room than the standard band. */
+  padding-inline: var(--section-inline-wide);
+  background-color: color-mix(in srgb, var(--color-accent) 8%, var(--paper-ground));
+  background-image:
+    radial-gradient(
+      90% 70% at 100% 0%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent),
+      transparent 55%
+    ),
+    var(--paper-atmosphere);
+  border-block: 1px solid var(--color-divider);
+}
+.work-head { flex: 0 0 auto; text-align: center; }
+.work-head .kicker { margin: 0; }
+.work-head .section-title { margin: 14px 0 8px; }
+.work-head .section-subtitle { margin: 0 auto; }
+
+/* ── time cards ───────────────────────────────────────────────────────────
+   Fill the space under the head as one equal-height row. Each slip is a flex
+   column whose bullet list takes the leftover height — never taller than the
+   grid cell, so nothing spills over the section head. */
+.timecards {
+  /* ~15% smaller than the full leftover stage, centred in the panel */
+  flex: 0 1 auto;
+  width: 85%;
+  max-height: 85%;
+  min-height: 0;
+  margin-inline: auto;
+  /* Sit in the middle of the space under the head (not pinned to the top). */
+  margin-block: auto;
+  align-self: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 78px;
+  align-items: stretch;
+}
+.timecard {
+  position: relative;
+  box-sizing: border-box;
+  aspect-ratio: 210 / 297;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+  align-self: center;
+  overflow: hidden;
+  padding: 14px 16px 48px;
+  /* stock paper — warm wash + grain, not a flat white UI card */
+  background-color: #f7f0e4;
+  background-image:
+    linear-gradient(
+      152deg,
+      color-mix(in srgb, #fff8ec 70%, #e8dcc4) 0%,
+      #f7f0e4 42%,
+      color-mix(in srgb, #f3ead8 78%, #d9c9a8) 100%
+    ),
+    var(--grain);
+  border: 1px solid color-mix(in srgb, var(--color-divider) 70%, #b9a888);
+  /* uneven cut — each slip gets its own corner mix below */
+  border-radius: 3px 6px 4px 5px;
+  box-shadow:
+    3px 16px 32px -20px rgba(40, 32, 22, 0.55),
+    0 1px 0 rgba(255, 252, 245, 0.65) inset,
+    0 -12px 28px -24px rgba(90, 70, 30, 0.18) inset;
+  display: flex;
+  flex-direction: column;
+  transform-origin: 50% 60%;
+}
+/* each slip sits a little differently on the desk */
+.timecard--1 {
+  border-radius: 2px 7px 3px 5px;
+  box-shadow:
+    -2px 15px 30px -18px rgba(40, 32, 22, 0.52),
+    0 1px 0 rgba(255, 252, 245, 0.65) inset,
+    0 -12px 28px -24px rgba(90, 70, 30, 0.16) inset;
+}
+.timecard--2 {
+  border-radius: 5px 2px 6px 3px;
+  background-image:
+    linear-gradient(
+      168deg,
+      #f8f2e6 0%,
+      color-mix(in srgb, #f7f0e4 85%, #e2d3b5) 55%,
+      #f4ebdc 100%
+    ),
+    var(--grain);
+  box-shadow:
+    4px 14px 28px -18px rgba(40, 32, 22, 0.5),
+    0 1px 0 rgba(255, 252, 245, 0.6) inset,
+    0 -12px 28px -24px rgba(90, 70, 30, 0.14) inset;
+}
+.timecard--3 {
+  border-radius: 4px 5px 2px 7px;
+  background-image:
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, #f7f0e4 80%, #e6d7b8) 0%,
+      #f6efe3 48%,
+      color-mix(in srgb, #f3ead8 70%, #dcc9a6) 100%
+    ),
+    var(--grain);
+  box-shadow:
+    1px 17px 34px -20px rgba(40, 32, 22, 0.55),
+    0 1px 0 rgba(255, 252, 245, 0.55) inset,
+    0 -12px 28px -24px rgba(90, 70, 30, 0.2) inset;
+}
+/* soft age at the edges — like a handled slip */
+.timecard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fffdf8 35%, transparent),
+    inset 0 18px 36px -28px rgba(120, 95, 50, 0.14),
+    inset 0 -22px 40px -30px rgba(70, 55, 30, 0.1);
+}
+/* faint corner dog-ear on one slip only */
+.timecard--2::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  background:
+    linear-gradient(
+      225deg,
+      color-mix(in srgb, var(--color-accent) 22%, transparent) 0 48%,
+      transparent 50%
+    );
+  pointer-events: none;
+  opacity: 0.55;
+}
+/* tear-off perforation across the top of the slip — slightly off-true */
+.timecard-perf {
+  flex: 0 0 auto;
+  height: 0;
+  margin: 1px -3px 10px 1px;
+  border-top: 2px dashed color-mix(in srgb, var(--color-text) 20%, #a89068);
+  transform: rotate(-0.35deg);
+}
+.timecard-slip-head {
+  flex: 0 0 auto;
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.timecard-slip-label {
+  font-family: var(--font-heading);
+  text-transform: uppercase; letter-spacing: 0.24em;
+  font-size: 11px; color: var(--color-neutral-600);
+}
+.timecard-no {
+  font-feature-settings: 'tnum';
+  text-transform: uppercase; letter-spacing: 0.16em;
+  font-size: 11px; color: var(--color-neutral-600);
+}
+.timecard-company {
+  flex: 0 0 auto;
+  font-family: var(--font-heading); font-weight: 600;
+  font-size: clamp(18px, 1.45vw, 24px);
+  margin: 0; color: var(--color-text);
+  display: flex; align-items: center; gap: 10px;
+  min-width: 0;
+}
+.timecard-company .job-company-btn { min-width: 0; }
+.timecard-company .job-logo {
+  height: 26px;
+  max-width: 72px;
+  flex: 0 0 auto;
+}
+.timecard-role {
+  flex: 0 0 auto;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-accent-700); margin: 4px 0 8px;
+}
+.timecard-clock {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
+  padding: 8px 0; margin-bottom: 8px;
+  border-block: 1px solid var(--color-divider);
+}
+.timecard-punch-slot { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.timecard-punch-key {
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.timecard-punch-val {
+  font-family: var(--font-heading); font-size: 14px;
+  font-feature-settings: 'tnum'; color: var(--color-text);
+  white-space: nowrap;
+}
+.timecard-punch-arrow { color: var(--color-accent-700); font-size: 14px; flex: 0 0 auto; }
+.timecard .tag-row {
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+.timecard .tag {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  color: var(--color-accent-800);
+  background: color-mix(in srgb, var(--color-accent) 11%, #f7f0e4);
+  border: 1px solid color-mix(in srgb, var(--color-accent-700) 32%, transparent);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 50%, transparent);
+}
+.timecard-bullets {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  max-width: none;
+  font-size: 11.5px;
+  line-height: 1.34;
+  /* denser slips still win on short viewports — keep copy reachable */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-right: 2px;
+}
+.timecard-bullets::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.timecard-bullets.is-at-end {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.timecard-bullets li { margin-bottom: 2px; }
+.timecard-bullets li:last-child { margin-bottom: 0; }
+/* rubber-stamp overlays the foot of every slip so equal-height cards share
+   one baseline without the stamp inventing empty flex space */
+.timecard-stamp {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  margin: 0;
+  padding: 2px 8px;
+  font-family: var(--font-heading);
+  text-transform: uppercase; letter-spacing: 0.14em;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-accent-700) 72%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent-700) 55%, transparent);
+  border-radius: 5px;
+  transform: rotate(-8deg); opacity: 0.7; pointer-events: none;
+}
+.timecard-rail-cue { display: none; }
+/* Name and mark travel together and open the note on the place. */
+.job-company-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.job-company-btn:hover { color: var(--color-accent-700); }
+.job-company-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+/* Full colour here — no ink wash, unlike the timeline marks. */
+.job-logo {
+  height: 32px;
+  width: auto;
+  max-width: 104px;
+  object-fit: contain;
+  transition: transform 0.25s ease;
+}
+.job-company-btn:hover .job-logo { transform: scale(1.07); }
+.tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.job-bullets {
+  margin: 0; padding-left: 18px;
+  font-size: 15.5px; line-height: 1.75;
+  color: var(--color-neutral-800); max-width: 88ch;
+}
+

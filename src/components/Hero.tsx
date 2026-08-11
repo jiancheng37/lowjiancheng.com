@@ -16,7 +16,7 @@ const STACK_SLOTS = [
 ];
 
 /* The hero. Portrait plate on the left; name and typewriter roles on the
-   right. See portfolio.css. */
+   right. See styles/hero.css. */
 const Hero: React.FC = () => {
   const [roleIndex, setRoleIndex] = useState(0);
   const [typed, setTyped] = useState('');

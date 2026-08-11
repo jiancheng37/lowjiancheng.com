@@ -1,0 +1,204 @@
+/* Shared page layout — consumes tokens.css, foundations.css and primitives.css.
+   Every color, font and radius comes from that file's tokens; the sizes here are
+   the page's own editorial scale, per the design handoff. */
+
+:root {
+  /* sticky nav height — scroll pad + snap panels use the leftover viewport */
+  --nav-offset: 73px;
+  /* Shared section geometry — every full-bleed band uses these unless it
+     explicitly opts into a wider / taller variant (work, projects fold). */
+  --page-max: 1280px;
+  --page-max-wide: 1520px;
+  /* Half-width companions avoid division inside calc(), which the legacy
+     Create React App PostCSS pipeline cannot parse. */
+  --page-half: 640px;
+  --page-half-wide: 760px;
+  --section-pad-inline: 72px;
+  --section-inline: max(
+    var(--section-pad-inline),
+    calc(50vw - var(--page-half) + var(--section-pad-inline))
+  );
+  --section-inline-wide: max(20px, calc(50vw - var(--page-half-wide)));
+  --section-pad-block-start: 24px;
+  /* Match Side Quests fold clearance across every snap panel. */
+  --section-pad-block-end: 80px;
+  --paper-ground: var(--color-bg);
+  /* Use the exact same paper treatment as the header across every band. */
+  --paper-atmosphere: var(--grain);
+}
+
+html {
+  overscroll-behavior-y: none;
+  scroll-behavior: smooth;
+  /* snap destinations sit under the sticky header */
+  scroll-padding-top: var(--nav-offset);
+  /* wheel / swipe lands on the next full section */
+  scroll-snap-type: y mandatory;
+  /* 100vw breakout must not spawn a horizontal scrollbar */
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
+}
+
+body {
+  /* Paper grain: inline feTurbulence, desaturated and run through
+     feComponentTransfer so it modulates the ground instead of washing over it.
+     The data URI must stay fully percent-encoded — partially encoded, it still
+     decodes but silently drops the url(#n) filter reference and paints flat. */
+  --grain: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27180%27%20height%3D%27180%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.7%27%20numOctaves%3D%274%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27saturate%27%20values%3D%270%27%2F%3E%3CfeComponentTransfer%3E%3CfeFuncR%20type%3D%27linear%27%20slope%3D%270.62%27%20intercept%3D%270.556%27%2F%3E%3CfeFuncG%20type%3D%27linear%27%20slope%3D%270.62%27%20intercept%3D%270.556%27%2F%3E%3CfeFuncB%20type%3D%27linear%27%20slope%3D%270.62%27%20intercept%3D%270.556%27%2F%3E%3CfeFuncA%20type%3D%27linear%27%20slope%3D%270%27%20intercept%3D%270.6%27%2F%3E%3C%2FfeComponentTransfer%3E%3C%2Ffilter%3E%3Crect%20width%3D%27180%27%20height%3D%27180%27%20filter%3D%27url(%23n)%27%2F%3E%3C%2Fsvg%3E");
+  /* Resolve the shared paper layer where --grain actually exists, then let
+     every page section inherit the valid value. */
+  --paper-atmosphere: var(--grain);
+  margin: 0;
+  background-color: var(--paper-ground);
+  background-image: var(--paper-atmosphere);
+  color: var(--color-text);
+}
+
+.page {
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 0 auto;
+}
+
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent-600); }
+
+
+/* ══ shared full-bleed band ═══════════════════════════════════════════════
+   Edge-to-edge wash; content sits on --section-inline. Section-specific
+   files only override what’s unique (work’s wide gutter, projects’ fold pad). */
+.nav-bar,
+.hero,
+.section--about,
+.section--chapters,
+.section--work,
+.section--projects,
+.section--curiosities,
+.contact {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: var(--section-inline);
+  box-sizing: border-box;
+}
+
+.section--about,
+.section--chapters,
+.section--work,
+.section--projects,
+.section--curiosities {
+  padding-block: var(--section-pad-block-start) var(--section-pad-block-end);
+  background-color: var(--paper-ground);
+  background-image: var(--paper-atmosphere);
+}
+
+/* ══ shared section furniture ═════════════════════════════════════════════
+   Every major band is a full-viewport snap panel. Tall content (work, projects)
+   scrolls inside the panel so wheel gestures still advance one section at a time. */
+.hero,
+.section,
+.contact {
+  position: relative;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  height: calc(100svh - var(--nav-offset));
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  /* keep wheel/trackpad scrolling; hide the chrome */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hero::-webkit-scrollbar,
+.section::-webkit-scrollbar,
+.contact::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.section--about {
+  /* one viewport: no inner scroll — wheel advances to the next snap panel */
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* keep the kicker tag hug its text (stretch was making a full-width bar) */
+  align-items: flex-start;
+}
+.section--about .entry-pair {
+  width: 100%;
+  align-self: stretch;
+}
+.section--about .section-title {
+  margin: 14px 0 8px;
+  font-size: clamp(40px, 4.5vw, 56px);
+}
+.section--about .about-closing {
+  align-self: center;
+}
+.kicker { letter-spacing: 0.12em; }
+
+.section-title {
+  font-family: var(--font-heading); font-weight: 400; font-size: 62px;
+  margin: 22px 0 12px; color: var(--color-accent-700);
+}
+.section-subtitle {
+  font-size: 15px; line-height: 1.6; color: var(--color-neutral-700);
+  margin: 0 0 48px; max-width: 62ch;
+}
+
+/* Bottom fold cue — sits in the shared end padding, points at the next band. */
+.section-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 6px 4px;
+  /* Centering lives on Framer `x: -50%` so the bob can own transform. */
+  text-decoration: none;
+  color: var(--color-neutral-700);
+  transition: color 180ms ease;
+}
+.section-cue:hover,
+.section-cue:focus-visible {
+  color: var(--color-accent-700);
+}
+.section-cue:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.section-cue-kicker {
+  flex: 0 0 auto;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+.section-cue-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.section-cue-icon {
+  flex: 0 0 auto;
+  color: var(--color-accent-700);
+}
+
+/* The mat wrapper's archival grade sits on .plate (primitives.css); the image
+   fills it edge to edge inside the border. */
+.plate-img { width: 100%; height: 100%; object-fit: cover; }

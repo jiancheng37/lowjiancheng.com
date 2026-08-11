@@ -1,0 +1,286 @@
+/* ══ chapters — life timeline inside one snap panel ═══════════════════════
+   Header stays put; .chapters-scroll is the only overflowing region. */
+.section--chapters {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chapters-head { flex: 0 0 auto; text-align: center; }
+.chapters-head .section-subtitle { margin: 0 auto 28px; }
+.chapters-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-right: 8px;
+  /* The wheel hook controls the deliberate hand-off at either edge. */
+  overscroll-behavior-y: contain;
+}
+.chapters-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+/* Journey: curving dotted path down the middle, chapters left / right. */
+.chapters-journey {
+  position: relative;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  /* Clip absolute trail/traveler so they can't inflate the rail's scrollHeight. */
+  overflow: hidden;
+}
+.chapters-path-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.chapters-path-dots {
+  stroke: color-mix(in srgb, var(--color-accent) 38%, var(--color-neutral-500));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1.25 6.5;
+  opacity: 0.5;
+}
+.chapters-path-progress {
+  stroke: var(--color-accent-700);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-dasharray: 1.25 6.5;
+}
+.chapters-path-stop {
+  fill: var(--color-bg);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+.chapters-path-stop.is-read {
+  fill: color-mix(in srgb, var(--color-accent) 55%, var(--color-bg));
+}
+.chapters-path-stop.is-active {
+  fill: var(--color-accent);
+  stroke: var(--color-accent-700);
+}
+.chapters-traveler {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  color: var(--color-accent-700);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--color-bg) 85%, transparent));
+  will-change: left, top, transform;
+}
+.chapters-traveler.is-instant {
+  transition: none;
+}
+.chapters-rocket-svg {
+  display: block;
+  overflow: visible;
+}
+.chapters-rocket-flame {
+  transform-box: fill-box;
+  transform-origin: right center;
+}
+.chapters-rocket-flame--outer { opacity: 0.38; }
+.chapters-rocket-flame--inner { opacity: 0.8; }
+.chapters-traveler.is-walking .chapters-rocket-flame--outer {
+  animation: chaptersRocketFlame 0.22s ease-in-out infinite alternate;
+}
+.chapters-traveler.is-walking .chapters-rocket-flame--inner {
+  animation: chaptersRocketFlame 0.16s ease-in-out infinite alternate-reverse;
+}
+@keyframes chaptersRocketFlame {
+  from { transform: scaleX(0.72); opacity: 0.35; }
+  to { transform: scaleX(1.18); opacity: 0.82; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapters-traveler.is-walking .chapters-rocket-flame {
+    animation: none;
+  }
+}
+/* Vertical padding is set from JS so the first and last rows can still reach
+   the reading window. */
+.chapters-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0 48px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  position: relative;
+  z-index: 1;
+}
+.chapter {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* Keep a clear channel for the snake so copy never sits on the trail. */
+  column-gap: clamp(72px, 12vw, 160px);
+  align-items: center;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.chapter.is-openable {
+  cursor: pointer;
+}
+.chapter.is-openable:focus-visible {
+  outline: none;
+}
+.chapter.is-openable:focus-visible .chapter-body {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+.chapter-year {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--color-accent-700);
+  font-feature-settings: 'tnum';
+  margin-bottom: 6px;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+.chapter--left .chapter-body {
+  grid-column: 1;
+  justify-self: end;
+  /* Keep left-aligned type; only the block sits on the left of the path. */
+  text-align: left;
+  flex-direction: row-reverse;
+  padding-right: 8px;
+}
+.chapter--right .chapter-body {
+  grid-column: 2;
+  justify-self: start;
+  text-align: left;
+  padding-left: 8px;
+}
+/* Copy + logo share the body column. */
+.chapter-body {
+  min-width: 0;
+  width: fit-content;
+  max-width: min(48ch, 100%);
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  transform: scale(0.985);
+  opacity: 0.58;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+.chapter-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chapter-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 24px;
+  margin: 0 0 6px;
+  color: var(--color-text);
+  transition: color 0.3s ease;
+}
+.chapter-place {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  margin-bottom: 10px;
+  transition: color 0.3s ease;
+}
+.chapter-text {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--color-neutral-700);
+  text-wrap: pretty;
+  transition: color 0.3s ease;
+}
+.chapter-mark {
+  position: relative;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  overflow: visible;
+}
+.chapter-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) sepia(0.55) contrast(1.05) brightness(0.92);
+  transform: scale(1);
+  transform-origin: center center;
+  transition: filter 0.35s ease, transform 0.35s ease;
+}
+.chapter-mark-text {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-700);
+  line-height: 1;
+  transition: transform 0.35s ease, color 0.35s ease;
+}
+
+/* Rows away from the window sit back — still readable, just quieter. */
+.chapter--left .chapter-body { transform-origin: right center; }
+.chapter--right .chapter-body { transform-origin: left center; }
+.chapter-year { opacity: 0.7; }
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-body {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-year {
+  opacity: 1;
+  color: var(--color-accent-700);
+}
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-title {
+  color: var(--color-accent-700);
+}
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-place {
+  color: var(--color-accent);
+}
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-text {
+  color: var(--color-text);
+}
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-logo {
+  filter: none;
+  transform: scale(1.06);
+}
+.chapter:is(.is-focus, .is-lit, :focus-within) .chapter-mark-text {
+  transform: scale(1.06);
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-year,
+  .chapter-title,
+  .chapter-place,
+  .chapter-text,
+  .chapter-logo,
+  .chapter-mark-text,
+  .chapter-body,
+  .chapter-copy {
+    transition: none;
+  }
+  .chapter-body,
+  .chapter:is(.is-focus, .is-lit, :focus-within) .chapter-logo,
+  .chapter:is(.is-focus, .is-lit, :focus-within) .chapter-mark-text {
+    transform: none;
+  }
+}
+
