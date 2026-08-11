@@ -227,7 +227,7 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     year: '2025',
-    title: 'EPFL, Bachelor in Computer Science · Lausanne, Switzerland',
+    title: 'EPFL, Bachelor in Computer Science',
     place: 'Student Exchange Program',
     logo: '/epfl.png',
     org: 'epfl',
@@ -488,25 +488,30 @@ export const CURIOSITIES: Curiosity[] = [
       '/curiosities/photography-2.jpg',
       '/curiosities/photography-3.jpg',
     ],
-    responsiveImages: [
-      '/curiosities/photography-responsive-1.jpg',
-      '/curiosities/photography-responsive-2.jpg',
-      '/curiosities/photography-responsive-3.jpg',
-    ],
     imageAlt: 'Mount Fuji from a recent trip',
     caption: 'Fuji.',
     body:
       'I have no real idea what I am doing. ISO, shutter speed, aperture—I could recite the words, but ask me to explain the triangle properly and I will smile and change the subject. I do not chase technical perfection. I just like pretty views, and pointing a camera at them feels like a good enough reason to stop and look.\n\nThe camera itself has a slightly ridiculous origin story. I won two thousand dollars at a casino and, instead of doing anything sensible with it, bought a Fujifilm X100V. It has been my companion ever since. My favourite film simulation is Portra 400—warm, a little soft, the kind of look that makes ordinary light feel worth keeping. I am not trying to be a photographer. I am just trying not to walk past the good bits.',
   },
   {
+    id: 'fashion',
+    label: 'Fashion',
+    title: 'Black and white. (and everything in between)',
+    images: [
+      '/curiosities/fashion-1.jpg',
+      '/curiosities/fashion-3.jpg',
+      '/curiosities/fashion-4.jpg',
+    ],
+    imageAlt: 'Outfit detail from a day out',
+    caption: 'Fitssss.',
+    body:
+      'For a long time I was the guy who exclusively wore dri-fit because it was comfortable, and whose entire wardrobe philosophy was jeans and a T-shirt. That carried me all the way to university without much complaint from anyone, least of all me.\n\nThen came my ex—and honestly, the only good thing she brought was awakening my love for fashion. Or vanity. Fine line. Either way, something clicked, and since then I have actually cared about dressing well. I am a sucker for monochrome fits; black is my favourite colour, and I will happily repeat a silhouette if the fabric is right.\n\nIt got serious enough that during exchange I flew to Madrid for five days, and as far as I can tell the only thing I did there was shop for clothes and shoes. No museums. Barely any sightseeing. Just racks, fitting rooms, and a suitcase that came home heavier than it left. Walking around Europe after that, I kept getting compliments on my fits—and that is basically what I do it for. Not a magazine spread. Just someone noticing, and me knowing the outfit earned it.'
+  },
+  {
     id: 'formula1',
     label: 'Formula 1',
     title: 'Cars going in circles',
     images: ['/curiosities/formula1-1.jpg', '/curiosities/formula1-2.jpg'],
-    responsiveImages: [
-      '/curiosities/formula1-1.jpg',
-      '/curiosities/formula1-responsive-2.jpg',
-    ],
     imageAlt: 'Singapore Grand Prix',
     caption: 'Marina Bay.',
     captions: [
@@ -521,7 +526,6 @@ export const CURIOSITIES: Curiosity[] = [
     label: 'Mixed Martial Arts',
     title: 'Strictly a spectator',
     images: ['/curiosities/mma-1.jpg'],
-    responsiveImages: ['/curiosities/mma-responsive.jpg'],
     imageAlt: 'Israel Adesanya after knocking out Alex Pereira at UFC 287',
     caption: 'UFC 287.',
     body:
