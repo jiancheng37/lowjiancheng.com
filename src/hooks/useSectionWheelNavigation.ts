@@ -32,6 +32,15 @@ export function useSectionWheelNavigation(): void {
     const lastNestedWheelAt = new WeakMap<HTMLElement, number>();
 
     const onWheel = (event: WheelEvent) => {
+      /* Organisation notes are modal. Never let a wheel gesture over one
+         reach the full-page section navigator behind it, even when the note
+         itself has no scrollable overflow (or has reached an edge). */
+      const eventTarget = event.target instanceof HTMLElement ? event.target : null;
+      if (eventTarget?.closest('.org-note-backdrop')) {
+        event.preventDefault();
+        return;
+      }
+
       if (matchMedia('(max-width: 1023px)').matches) return;
       if (isSectionTransitioning()) {
         event.preventDefault();
@@ -57,7 +66,7 @@ export function useSectionWheelNavigation(): void {
       if (current.id === 'c-chapters') return;
 
       const direction: 1 | -1 = event.deltaY > 0 ? 1 : -1;
-      let target = event.target instanceof HTMLElement ? event.target : null;
+      let target = eventTarget;
 
       const handleReadingArea = (area: HTMLElement) => {
         if (!hasScrollableOverflow(area)) return false;

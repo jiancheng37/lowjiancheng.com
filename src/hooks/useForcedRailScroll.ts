@@ -1,4 +1,4 @@
-import { RefObject, useEffect } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
 import { isSectionTransitioning, scrollToSection } from '../utils/sectionTransition';
 
 /** A wheel notch in lines, in pixels (deltaMode: line). */
@@ -23,6 +23,11 @@ export function useForcedRailScroll(
   paused: boolean,
   reduceMotion: boolean | null,
 ): void {
+  /* Pausing for a modal must not recreate the intersection observer. Its first
+     callback treats a visible section as a fresh entry and rewinds the rail. */
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return undefined;
@@ -65,7 +70,7 @@ export function useForcedRailScroll(
     const onWheel = (event: WheelEvent) => {
       if (matchMedia('(max-width: 1023px)').matches) return;
       const rail = railRef.current;
-      if (!rail || paused) return;
+      if (!rail || pausedRef.current) return;
       if (!sectionVisible()) return;
 
       const step =
@@ -104,5 +109,5 @@ export function useForcedRailScroll(
       observer.disconnect();
       window.removeEventListener('wheel', onWheel);
     };
-  }, [sectionRef, railRef, paused, reduceMotion]);
+  }, [sectionRef, railRef, reduceMotion]);
 }
