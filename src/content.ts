@@ -466,7 +466,7 @@ export const CURIOSITIES: Curiosity[] = [
     imageAlt: 'On stage at the keys',
     caption: 'Stage nights.',
     body:
-      'My listening taste is fairly uncomplicated: mostly pop, acoustic, and hip-hop, with the same few favourites inevitably finding their way back into every playlist. Playing, however, feels much more personal. There is something deeply therapeutic about sitting at a piano and singing—the kind of release that listening alone never quite gives me. For a little while, everything else becomes quieter, and the music feels less like something I consume and more like somewhere I can retreat to.\n\nAt NUS, I was also part of a band in my residential college, where I had the chance to perform twice before a packed auditorium. Both times were equal parts nerve-racking and exhilarating: the rehearsals, the anticipation backstage, and then the strange rush of playing for a room full of people. They remain some of my favourite university memories—and proof that I do, occasionally, leave the safety of my bedroom piano.',
+      'My listening taste is fairly uncomplicated: mostly pop, acoustic, and hip-hop, with the same few favourites inevitably finding their way back into every playlist. Playing, however, feels much more personal. There is something deeply therapeutic about sitting at a piano and singing—the kind of release that listening alone never quite gives me. For a little while, everything else becomes quieter, and the music feels less like something I consume and more like somewhere I can retreat to.\n\nAt NUS, I was also part of a band in my residential college, where I had the chance to perform twice before a packed auditorium. Both times were equal parts nerve-racking and exhilarating: the rehearsals, the anticipation backstage, and then the strange rush of playing for a room full of people. They remain some of my favourite university memories—the kind I knew I would miss even while they were happening. ',
   },
   {
     id: 'gaming',
@@ -477,7 +477,7 @@ export const CURIOSITIES: Curiosity[] = [
     imageAlt: 'Pharah figure from Overwatch',
     caption: 'Justice rains.',
     body:
-      'I have played plenty of games, but only one ever took over my life. I started Overwatch in the open beta and have been a Pharah main more or less ever since. I could not tell you why projectiles come easily to me—something about leading a shot just makes sense—but for a while that was worth something. My first ever income came from boosting people up the ranks through Carousell listings, which is a strange line to have on a résumé and a very good way to be paid for something you would have done anyway. A few teams even asked me to play for them.\n\nWhat I actually remember is the people. Every week through secondary school, the same group of us would pile into a lobby and play until someone had to go to bed. It was how I socialised, and the thing I looked forward to all week. We do not talk much anymore, but those nights still mean the world to me.\n\nI have since hung up the gloves. The game has moved on without me—new heroes, new maps, modes I have never touched. Nothing else has come close to what it was, and I do not expect anything to.',
+      'I have played plenty of games, but only one ever took over my life. I started Overwatch in the open beta and have been a Pharah main more or less ever since. I could not tell you why projectiles come easily to me—something about leading a shot just makes sense. My first ever income came from boosting people up the ranks through Carousell listings, which is a strange line to have on a resume and a very good way to be paid for something you would have done anyway. A few teams even asked me to play for them.\n\nWhat I actually remember is the people. Every week through secondary school, the same group of us would pile into a lobby and play until someone had to go to bed. It was how I socialised, and the thing I looked forward to all week. We do not talk much anymore, but those nights still mean the world to me.\n\nI have since hung up the gloves. The game has moved on without me—new heroes, new maps, modes I have never touched. Other games have come and gone, but Overwatch is still the one I look back on most fondly.',
   },
   {
     id: 'photography',
@@ -488,34 +488,29 @@ export const CURIOSITIES: Curiosity[] = [
       '/curiosities/photography-2.jpg',
       '/curiosities/photography-3.jpg',
     ],
+    responsiveImages: [
+      '/curiosities/photography-responsive-1.jpg',
+      '/curiosities/photography-responsive-2.jpg',
+      '/curiosities/photography-responsive-3.jpg',
+    ],
     imageAlt: 'Mount Fuji from a recent trip',
     caption: 'Fuji.',
     body:
       'I have no real idea what I am doing. ISO, shutter speed, aperture—I could recite the words, but ask me to explain the triangle properly and I will smile and change the subject. I do not chase technical perfection. I just like pretty views, and pointing a camera at them feels like a good enough reason to stop and look.\n\nThe camera itself has a slightly ridiculous origin story. I won two thousand dollars at a casino and, instead of doing anything sensible with it, bought a Fujifilm X100V. It has been my companion ever since. My favourite film simulation is Portra 400—warm, a little soft, the kind of look that makes ordinary light feel worth keeping. I am not trying to be a photographer. I am just trying not to walk past the good bits.',
   },
   {
-    id: 'fashion',
-    label: 'Fashion',
-    title: 'Black and white. (and everything in between)',
-    images: [
-      '/curiosities/fashion-1.jpg',
-      '/curiosities/fashion-3.jpg',
-      '/curiosities/fashion-4.jpg',
-    ],
-    imageAlt: 'Outfit detail from a day out',
-    caption: 'Fitssss.',
-    body:
-      'For a long time I was the guy who exclusively wore dri-fit because it was comfortable, and whose entire wardrobe philosophy was jeans and a T-shirt. That carried me all the way to university without much complaint from anyone, least of all me.\n\nThen came my ex—and honestly, the only good thing she brought was awakening my love for fashion. Or vanity. Fine line. Either way, something clicked, and since then I have actually cared about dressing well. I am a sucker for monochrome fits; black is my favourite colour, and I will happily repeat a silhouette if the fabric is right.\n\nIt got serious enough that during exchange I flew to Madrid for five days, and as far as I can tell the only thing I did there was shop for clothes and shoes. No museums. Barely any sightseeing. Just racks, fitting rooms, and a suitcase that came home heavier than it left. Walking around Europe after that, I kept getting compliments on my fits—and that is basically what I do it for. Not a magazine spread. Just someone noticing, and me knowing the outfit earned it.'
-  },
-  {
     id: 'formula1',
     label: 'Formula 1',
     title: 'Cars going in circles',
     images: ['/curiosities/formula1-1.jpg', '/curiosities/formula1-2.jpg'],
+    responsiveImages: [
+      '/curiosities/formula1-1.jpg',
+      '/curiosities/formula1-responsive-2.jpg',
+    ],
     imageAlt: 'Singapore Grand Prix',
-    caption: 'Marina Bay.',
+    caption: 'Marina Bay, 2024.',
     captions: [
-      'Marina Bay.',
+      'Marina Bay, 2024',
       'Ferrari — my favourite way to be disappointed.',
     ],
     body:
@@ -526,9 +521,10 @@ export const CURIOSITIES: Curiosity[] = [
     label: 'Mixed Martial Arts',
     title: 'Strictly a spectator',
     images: ['/curiosities/mma-1.jpg'],
+    responsiveImages: ['/curiosities/mma-responsive.jpg'],
     imageAlt: 'Israel Adesanya after knocking out Alex Pereira at UFC 287',
     caption: 'UFC 287.',
     body:
-      'I do not train, and I have no illusions about how I would do in a cage. I just follow the UFC closely. There is something primal about two people trying to knock each other out that scratches an itch nothing else does, and a clean knockout spikes my dopamine in a way no other sport manages.\n\nThe build-up is part of it too. A fight with real history behind it—two people who actually want to settle something—lands very differently from two strangers matched on a card. By the time the walkouts start, I am usually far more invested than I have any right to be.\n\nMy favourite moment watching live was UFC 287: Israel Adesanya knocking out Alex Pereira in their rematch. Pereira had already beaten him three times before—twice in kickboxing, once in the Octagon—and the narrative was basically written. Then Izzy walked in, closed the chapter in the second round, and reminded everyone what it looks like when someone refuses to stay on the wrong side of a rivalry. Never giving up sounds like a poster; that night it looked like a left hook.',
+      'I do not train, and I have no illusions about how I would do in a cage. I just follow the UFC closely. There is something primal about two people trying to knock each other out that scratches an itch nothing else does, and a clean knockout spikes my dopamine in a way no other sport manages.\n\nThe build-up is part of it too. A fight with real history behind it—two people who actually want to settle something—lands very differently from two strangers matched on a card. By the time the walkouts start, I am usually far more invested than I have any right to be.\n\nMy favourite moment watching live was UFC 287: Israel Adesanya knocking out Alex Pereira in their rematch. Pereira had already beaten him three times before—twice in kickboxing, once in the Octagon—and the narrative was basically written. Then Izzy walked in, closed the chapter in the second round, and reminded everyone what it looks like when someone refuses to stay on the wrong side of a rivalry. The knockout was great, but the history behind it was what really made the moment.”',
   },
 ];

@@ -999,14 +999,18 @@
     padding-bottom: 20px;
     transform: none !important;
   }
-  .curiosity-copy-fade { display: block; }
-  .curiosity-copy:not(.is-expanded) .curiosity-copy-fade { opacity: 1; }
+  .curiosity-copy-fade { display: none; }
+  .curiosity-copy:not(.is-expanded) .curiosity-copy-scroll {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%);
+  }
   .curiosity-copy.is-expanded .curiosity-copy-scroll-wrap {
     max-height: 2000px;
     overflow: visible;
   }
-  .curiosity-copy.is-expanded .curiosity-copy-fade {
-    opacity: 0;
+  .curiosity-copy.is-expanded .curiosity-copy-scroll {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
   .curiosity-read-more {
     position: relative;
