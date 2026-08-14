@@ -22,11 +22,25 @@ import Projects from './components/Projects';
 import ThingsIEnjoy from './components/ThingsIEnjoy';
 import Contact from './components/Contact';
 import { useSectionWheelNavigation } from './hooks/useSectionWheelNavigation';
+import { useImagePreloader } from './hooks/useImagePreloader';
+import { CURIOSITIES, PROFILE_FIGURES, PROJECTS } from './content';
+
+const INTERACTIVE_IMAGE_SOURCES = Array.from(
+  new Set([
+    ...PROFILE_FIGURES.map((figure) => figure.src),
+    ...PROJECTS.flatMap((project) => project.images ?? [project.image]),
+    ...CURIOSITIES.flatMap((curiosity) => [
+      ...(curiosity.images ?? []),
+      ...(curiosity.responsiveImages ?? []),
+    ]),
+  ]),
+);
 
 /* One scrolling page with CSS scroll-snap between major sections. Navigation
    is in-page anchors with `scroll-behavior: smooth`. */
 const App: React.FC = () => {
   useSectionWheelNavigation();
+  useImagePreloader(INTERACTIVE_IMAGE_SOURCES);
 
   return (
     <div className="page">
