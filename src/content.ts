@@ -502,17 +502,10 @@ export const CURIOSITIES: Curiosity[] = [
     id: 'formula1',
     label: 'Formula 1',
     title: 'Cars going in circles',
-    images: ['/curiosities/formula1-1.jpg', '/curiosities/formula1-2.jpg'],
-    responsiveImages: [
-      '/curiosities/formula1-1.jpg',
-      '/curiosities/formula1-responsive-2.jpg',
-    ],
+    images: ['/curiosities/formula1-1.jpg'],
+    responsiveImages: ['/curiosities/formula1-1.jpg'],
     imageAlt: 'Singapore Grand Prix',
     caption: 'Marina Bay, 2024.',
-    captions: [
-      'Marina Bay, 2024',
-      'Ferrari — my favourite way to be disappointed.',
-    ],
     body:
       'For years I did not get Formula 1. It looked like cars going round a track, and then going round it again. Then in 2022 a friend of my dad\u2019s came into free tickets, the family went to the Grand Prix, and something about being there stuck. I have followed it ever since.\n\nI still cannot properly explain why. It is not the engineering—I could not tell you what most of the technical talk actually means. It is not the drivers as personalities either, though I will happily admit to being a Max and a Lewis fan. Whatever the reason, I have not missed a qualifying or a race since. Even the ones where nothing happens for fifty laps, I somehow cannot bring myself to turn the television off.',
   },
