@@ -336,10 +336,10 @@ const Chapters: React.FC = () => {
   return (
     <div className="section section--chapters" id="c-chapters" ref={sectionRef}>
       <div className="chapters-head">
-        <span className="tag tag-outline kicker">previously</span>
+        <span className="tag tag-outline kicker">past &amp; upcoming</span>
         <h2 className="section-title">The Story So Far</h2>
         <p className="section-subtitle">
-          Schools, internships, detours, and other plot points — a timeline of where I’ve been and what I picked up along the way.
+          Schools, internships, next stops, detours, and other plot points — a timeline of where I’ve been and where I’m headed.
         </p>
       </div>
 

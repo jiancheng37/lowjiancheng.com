@@ -118,6 +118,22 @@ export interface OrgNote {
 }
 
 export const ORG_NOTES: Record<string, OrgNote> = {
+  stripe: {
+    name: 'Stripe',
+    kind: 'Financial infrastructure company · San Francisco and Dublin',
+    founded: '2010',
+    blurb:
+      'A technology company that builds programmable financial infrastructure for businesses. Its software helps companies accept payments, manage revenue, and offer financial services online, with dual headquarters in San Francisco and Dublin.',
+    href: 'https://stripe.com/about',
+  },
+  autodesk: {
+    name: 'Autodesk',
+    kind: 'Design and make software company · San Francisco, California',
+    founded: '1982',
+    blurb:
+      'A design and make software company whose tools span architecture, engineering, construction, product design, manufacturing, and media and entertainment. Its best-known products include AutoCAD, Revit, Fusion and Maya.',
+    href: 'https://www.autodesk.com/company',
+  },
   nus: {
     name: 'National University of Singapore',
     kind: 'Public research university · Kent Ridge, Singapore',
@@ -205,6 +221,26 @@ export interface Chapter {
 }
 
 export const CHAPTERS: Chapter[] = [
+  {
+    year: 'Jul 2027',
+    title: 'Stripe',
+    place: 'Incoming Software Engineer',
+    logo: '/stripe.svg',
+    org: 'stripe',
+    mark: 'Stripe',
+    body:
+      'Joining as a software engineer in July 2027.',
+  },
+  {
+    year: 'Jan 2027',
+    title: 'Autodesk',
+    place: 'Incoming Software Engineer',
+    logo: '/autodesk.svg',
+    org: 'autodesk',
+    mark: 'ADSK',
+    body:
+      'Joining as a software engineer in January 2027.',
+  },
   {
     year: 'Now',
     title: 'NUS, Bachelor of Computing in Computer Science',
