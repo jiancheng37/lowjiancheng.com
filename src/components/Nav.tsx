@@ -6,6 +6,7 @@ import { NAV_ITEMS } from '../content';
    disclosure button, leaving brand + CTA on the bar itself. */
 const Nav: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeId, setActiveId] = useState(NAV_ITEMS[0]?.id ?? 'c-me');
   const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,6 +35,45 @@ const Nav: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const ids = [
+      ...NAV_ITEMS.map((item) => item.id),
+      'c-curiosities',
+      'c-contact',
+    ];
+    let frame = 0;
+
+    const updateActiveSection = () => {
+      frame = 0;
+      const readingLine =
+        (parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--nav-offset'),
+        ) || 0) + window.innerHeight * 0.28;
+      let current = ids[0];
+
+      ids.forEach((id) => {
+        const section = document.getElementById(id);
+        if (section && section.getBoundingClientRect().top <= readingLine) {
+          current = id;
+        }
+      });
+      setActiveId(current);
+    };
+
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    updateActiveSection();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <div className="nav-bar" ref={navRef}>
       <a className="nav-brand-mark" href="#c-me" aria-label="Back to home">
@@ -41,19 +81,33 @@ const Nav: React.FC = () => {
       </a>
 
       <nav className={`nav-links${menuOpen ? ' is-open' : ''}`} id="nav-links">
-        {NAV_ITEMS.map((item, i) => (
+        {NAV_ITEMS.map((item) => (
           <a
             key={item.id}
-            className={`nav-link${i === 0 ? ' is-active' : ''}`}
+            className={`nav-link${activeId === item.id ? ' is-active' : ''}`}
             href={`#${item.id}`}
-            onClick={() => setMenuOpen(false)}
+            aria-current={activeId === item.id ? 'location' : undefined}
+            onClick={() => {
+              setActiveId(item.id);
+              setMenuOpen(false);
+            }}
           >
             {item.label}
           </a>
         ))}
       </nav>
 
-      <a className="btn btn-primary nav-cta" href="#c-contact">
+      <a
+        className={`btn btn-primary nav-cta${
+          activeId === 'c-contact' ? ' is-active' : ''
+        }`}
+        href="#c-contact"
+        aria-current={activeId === 'c-contact' ? 'location' : undefined}
+        onClick={() => {
+          setActiveId('c-contact');
+          setMenuOpen(false);
+        }}
+      >
         Contact
       </a>
 

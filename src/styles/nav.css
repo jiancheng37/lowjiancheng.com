@@ -32,6 +32,7 @@
   color: var(--color-text);
   border-bottom: 1px solid transparent;
   text-decoration: none;
+  transition: color 180ms ease, border-color 180ms ease;
 }
 .nav-link:hover,
 .nav-link.is-active {
@@ -41,5 +42,10 @@
 .nav-cta {
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.nav-cta.is-active {
+  color: var(--color-bg);
+  background: var(--color-accent-700);
+  border-color: var(--color-accent-700);
 }
 .nav-toggle { display: none; }
