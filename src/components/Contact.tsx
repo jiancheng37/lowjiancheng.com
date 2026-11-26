@@ -15,7 +15,7 @@ const GitHubIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const LINKS = [
-  { label: PROFILE.email, href: `mailto:${PROFILE.email}`, external: false, icon: Mail },
+  { label: 'Email', href: `mailto:${PROFILE.email}`, external: false, icon: Mail },
   { label: 'LinkedIn', href: PROFILE.linkedin, external: true, icon: LinkedInIcon },
   { label: 'GitHub', href: PROFILE.github, external: true, icon: GitHubIcon },
 ];

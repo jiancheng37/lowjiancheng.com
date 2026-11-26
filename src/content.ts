@@ -234,12 +234,12 @@ export const CHAPTERS: Chapter[] = [
   {
     year: '2027',
     title: 'Autodesk',
-    place: 'Incoming Software Engineer',
+    place: 'Incoming Software Engineer Intern',
     logo: '/autodesk.svg',
     org: 'autodesk',
     mark: 'ADSK',
     body:
-      'Joining as a software engineer in January 2027.',
+      'Joining as a software engineer intern in January 2027.',
   },
   {
     year: 'Now',
