@@ -222,7 +222,7 @@ export interface Chapter {
 
 export const CHAPTERS: Chapter[] = [
   {
-    year: 'Jul 2027',
+    year: '2027',
     title: 'Stripe',
     place: 'Incoming Software Engineer',
     logo: '/stripe.svg',
@@ -232,7 +232,7 @@ export const CHAPTERS: Chapter[] = [
       'Joining as a software engineer in July 2027.',
   },
   {
-    year: 'Jan 2027',
+    year: '2027',
     title: 'Autodesk',
     place: 'Incoming Software Engineer',
     logo: '/autodesk.svg',
