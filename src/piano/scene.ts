@@ -156,48 +156,74 @@ const KEYS: KeyInfo[] = (() => {
 const WHITE_KEYS = KEYS.filter((k) => !k.black);
 const BLACK_KEYS = KEYS.filter((k) => k.black);
 
-/* a page of music, drawn by hand on a canvas, used as a texture */
-const sheetTexture = (seed: number, title: string) => {
+/* a page of music: the paper and its title, as a texture. The score itself is drawn as geometry on top (see the
+   music desk), because painted lines this fine blur away to nothing in the dither */
+const sheetTexture = (title: string) => {
   const c = document.createElement('canvas');
   c.width = 256;
   c.height = 352;
   const g = c.getContext('2d')!;
   g.fillStyle = '#f3f0e7';
   g.fillRect(0, 0, c.width, c.height);
-  let s = seed;
-  const rnd = () => {
-    s = (s * 16807) % 2147483647;
-    return s / 2147483647;
-  };
   g.fillStyle = '#111';
-  g.font = 'italic 18px Georgia, serif';
-  g.fillText(title, 22, 34);
-  g.strokeStyle = '#222';
-  g.lineWidth = 1.2;
-  for (let staff = 0; staff < 6; staff += 1) {
-    const top = 58 + staff * 48;
-    for (let l = 0; l < 5; l += 1) {
-      g.beginPath();
-      g.moveTo(18, top + l * 5);
-      g.lineTo(238, top + l * 5);
-      g.stroke();
-    }
-    for (let n = 0; n < 12; n += 1) {
-      const x = 34 + n * 17 + rnd() * 4;
-      const y = top - 4 + Math.floor(rnd() * 10) * 2.5;
-      g.beginPath();
-      g.ellipse(x, y, 3.4, 2.4, -0.4, 0, Math.PI * 2);
-      g.fill();
-      g.beginPath();
-      g.moveTo(x + 3, y);
-      g.lineTo(x + 3, y - 15);
-      g.stroke();
-    }
-  }
+  g.font = 'italic 22px Georgia, serif';
+  g.fillText(title, 18, 30);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
+};
+
+/* the score on a page (0.2 × 0.27, centred on its origin), as geometry. Staff lines, bar lines and stems are lines,
+   which always come out exactly one dither dot wide, so the staves read as rows of music from across the room
+   and as clean engraving up close. Note heads are small dark ovals on the lines and spaces */
+const INK_LINE = new THREE.LineBasicMaterial({ color: 0x1a191c });
+/* engraving is black up close; from across the room fine staves should read as grey, the way small print does,
+   so the lines lighten as they get smaller on screen (see the frame loop) */
+const INK_NEAR = new THREE.Color(0x1a191c);
+const INK_FAR = new THREE.Color(0x86817a);
+const INK_FILL = new THREE.MeshBasicMaterial({ color: 0x1a191c });
+const HEAD_GEO = new THREE.CircleGeometry(0.0017, 8);
+const scoreFor = (seed0: number) => {
+  let seed = seed0;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const Z = 0.0012;
+  const LINE = 0.0028; // between staff lines: real proportions, a staff about a fortieth of the page
+  const x0 = -0.086;
+  const x1 = 0.086;
+  const pts: number[] = [];
+  const heads: [number, number][] = [];
+  for (let st = 0; st < 8; st += 1) {
+    const top = 0.135 - 0.05 - st * 0.0265;
+    for (let l = 0; l < 5; l += 1) pts.push(x0, top - l * LINE, Z, x1, top - l * LINE, Z);
+    for (let b = 0; b <= 3; b += 1) {
+      const bx = x0 + (b * (x1 - x0)) / 3;
+      pts.push(bx, top, Z, bx, top - 4 * LINE, Z);
+    }
+    for (let n = 0; n < 12; n += 1) {
+      const hx = x0 + 0.01 + n * 0.0138 + rnd() * 0.002;
+      const step = Math.floor(rnd() * 11) - 1; // which line or space, a little above and below the staff too
+      const hy = top + LINE - step * (LINE / 2);
+      heads.push([hx, hy]);
+      const up = hy < top - 2 * LINE; // low notes carry their stems up, high ones down
+      const sx = up ? hx + 0.0021 : hx - 0.0021;
+      pts.push(sx, hy, Z, sx, hy + (up ? 0.0098 : -0.0098), Z);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const group = new THREE.Group();
+  group.add(new THREE.LineSegments(geo, INK_LINE));
+  const dots = new THREE.InstancedMesh(HEAD_GEO, INK_FILL, heads.length);
+  const m = new THREE.Matrix4();
+  const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.38);
+  const stretch = new THREE.Vector3(1.35, 1, 1);
+  heads.forEach(([hx, hy], i) => dots.setMatrixAt(i, m.compose(new THREE.Vector3(hx, hy, Z + 0.0002), tilt, stretch)));
+  group.add(dots);
+  return group;
 };
 
 /* ── the two-colour pass ── */
@@ -422,7 +448,7 @@ export const createPianoScene = (
     const dir = b.clone().sub(a);
     const len = dir.length();
     dir.normalize();
-    return { a, dir, len, dashed, q: new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dir), energy: 0 };
+    return { a, dir, len, dashed, q: new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dir), energy: 0, glow: 1 };
   });
   const roleMtx = new THREE.Matrix4();
   const rolePos = new THREE.Vector3();
@@ -434,16 +460,32 @@ export const createPianoScene = (
       const sAt = (k + 0.5) / BEADS;
       /* the fundamental plus a little of the second harmonic, so it reads as a plucked string rather than a wave */
       const lift =
-        r.energy * 0.026 * (Math.sin(Math.PI * sAt) * Math.sin(t * 44) + 0.35 * Math.sin(2 * Math.PI * sAt) * Math.sin(t * 88 + 0.6));
+        r.energy * 0.04 * (Math.sin(Math.PI * sAt) * Math.sin(t * 44) + 0.35 * Math.sin(2 * Math.PI * sAt) * Math.sin(t * 88 + 0.6));
       rolePos.copy(r.a).addScaledVector(r.dir, sAt * r.len);
       rolePos.y += lift;
-      roleMtx.compose(rolePos, r.q, roleScale.set(0.011, 0.005, seg));
+      roleMtx.compose(rolePos, r.q, roleScale.set(0.011 + 0.013 * r.energy, 0.005 + 0.004 * r.energy, seg));
       roleBars.setMatrixAt(n * BEADS + k, roleMtx);
     }
   };
-  roles.forEach((_, n) => placeRole(n, 0));
+  const roleTint = new THREE.Color();
+  const tintRole = (n: number) => {
+    roleTint.lerpColors(ROLE_DIM, ROLE_LIT, roles[n].glow);
+    for (let k = 0; k < BEADS; k += 1) roleBars.setColorAt(n * BEADS + k, roleTint);
+  };
+  const ROLE_LIT = new THREE.Color(0xffffff);
+  const ROLE_DIM = new THREE.Color(0x67635d);
+  roles.forEach((_, n) => {
+    placeRole(n, 0);
+    tintRole(n);
+  });
   piano.add(roleBars);
   let roleHot: number | null = null;
+  /* while a role is pointed at, the light drops on the soundboard and plate so its one lit string stands clear */
+  const benchDim = [board, plate].map((m) => {
+    const mat = m.material as THREE.MeshPhongMaterial; // the plate shines; the soundboard (Lambert) doesn't
+    return { mat, base: mat.color.clone(), spec: mat.specular ? mat.specular.clone() : null };
+  });
+  let boardDim = 0;
   const STRING_LIT = new THREE.Color(0xeeeae0);
   const STRING_DIM = new THREE.Color(0x67635d);
 
@@ -470,15 +512,20 @@ export const createPianoScene = (
   const ledge = mesh(new THREE.BoxGeometry(0.86, 0.02, 0.05), lacquer, { part: 'thoughts', edges: 'light' });
   ledge.position.set(0, 0.01, 0.02);
   desk.add(ledge);
+  const pageTop = V(-0.105, 0.16 + 0.135, 0.01);
+  const pageFoot = V(-0.105, 0.16 - 0.135, 0.01);
+  let pageEndsReady = false;
   [-0.105, 0.105].forEach((x, i) => {
     const page = mesh(
       new THREE.PlaneGeometry(0.2, 0.27),
-      new THREE.MeshLambertMaterial({ map: sheetTexture(11 + i * 7, i ? 'op. 2' : 'étude no. 1') }),
+      new THREE.MeshLambertMaterial({ map: sheetTexture(i ? 'op. 2' : 'étude no. 1') }),
       { part: 'thoughts', shadow: false },
     );
     page.position.set(x, 0.16, 0.01);
+    page.add(scoreFor(11 + i * 7));
     desk.add(page);
   });
+
   piano.add(desk);
 
   /* keyboard — "me" */
@@ -729,7 +776,8 @@ export const createPianoScene = (
     [0.95, 1.05, 0.5, 31],
     [-0.75, 1.2, -0.35, 47],
   ] as [number, number, number, number][]).forEach(([x, z, r, seed]) => {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.29), new THREE.MeshLambertMaterial({ map: sheetTexture(seed, 'nocturne') }));
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.29), new THREE.MeshLambertMaterial({ map: sheetTexture('nocturne') }));
+    p.add(scoreFor(seed));
     p.rotation.set(-Math.PI / 2, 0, r);
     p.position.set(x, 0.004, z);
     p.receiveShadow = true;
@@ -833,7 +881,23 @@ export const createPianoScene = (
 
   type View = { pos: THREE.Vector3; target: THREE.Vector3; off: number };
   const homeView = (): View => ({ pos: orbitPos(orbitGoal), target: orbitTarget().clone(), off: 0 });
-  const closeView = (p: PartId): View => ({ pos: CLOSE[p].pos.clone(), target: CLOSE[p].target.clone(), off: 1 });
+  /* the name: stand off the bass side, square to the lid's outer face and a touch above it, so the lettering on
+     top reads straight and level; far enough back that the whole name fits beside the text. (Any step sideways,
+     along the way the name reads, would tip it on screen.) */
+  const nameCentre = () => {
+    piano.updateMatrixWorld(true);
+    return lid.localToWorld(V(NAME_SPOT.x, 0.025, NAME_SPOT.z));
+  };
+  const nameView = (): View => {
+    const centre = nameCentre();
+    const turn = lid.getWorldQuaternion(new THREE.Quaternion());
+    const face = V(0, 1, 0).applyQuaternion(turn).normalize(); // out of the lid's top
+    const d = narrow ? 3.3 : 2.2;
+    const pos = centre.clone().addScaledVector(face, d * 0.95).add(V(0, d * 0.18, 0));
+    return { pos, target: centre, off: 1 };
+  };
+  const closeView = (p: PartId): View =>
+    p === 'name' ? nameView() : { pos: CLOSE[p].pos.clone(), target: CLOSE[p].target.clone(), off: 1 };
   let resting: PartId | null = null;
   const cur: View = homeView();
   let hidden = false;
@@ -1014,7 +1078,16 @@ export const createPianoScene = (
 
     /* the role strings: the one pointed at shivers and the rest of the bed steps back; let go, and it rings out */
     let rolesMoved = false;
+    let rolesTinted = false;
     roles.forEach((r, n) => {
+      /* only the string being pointed at stays lit; the other roles step back with the rest of the bed */
+      const glowWant = roleHot === null || roleHot === n ? 1 : 0;
+      if (r.glow !== glowWant) {
+        r.glow += (glowWant - r.glow) * Math.min(1, dt * 8);
+        if (Math.abs(glowWant - r.glow) < 0.01) r.glow = glowWant;
+        tintRole(n);
+        rolesTinted = true;
+      }
       const want = roleHot === n ? 1 : 0;
       if (want === 0 && r.energy === 0) return;
       r.energy += (want - r.energy) * Math.min(1, dt * (want > r.energy ? 14 : 2.4));
@@ -1023,7 +1096,17 @@ export const createPianoScene = (
       rolesMoved = true;
     });
     if (rolesMoved) roleBars.instanceMatrix.needsUpdate = true;
+    if (rolesTinted && roleBars.instanceColor) roleBars.instanceColor.needsUpdate = true;
     stringMat.color.lerp(roleHot === null ? STRING_LIT : STRING_DIM, Math.min(1, dt * 8));
+    const dimWant = roleHot === null ? 0 : 1;
+    if (boardDim !== dimWant) {
+      boardDim += (dimWant - boardDim) * Math.min(1, dt * 8);
+      if (Math.abs(dimWant - boardDim) < 0.01) boardDim = dimWant;
+      benchDim.forEach(({ mat, base, spec }) => {
+        mat.color.copy(base).multiplyScalar(1 - 0.68 * boardDim);
+        if (spec) mat.specular.copy(spec).multiplyScalar(1 - 0.85 * boardDim);
+      });
+    }
 
     tally.visible = resting === 'off' && !bookMode && !dolly && !hidden && Math.floor(elapsed * 1.6) % 2 === 0;
 
@@ -1111,7 +1194,7 @@ export const createPianoScene = (
     fog.far = camDist + 5.5;
 
     const goal = resting
-      ? { pt: ANCHORS[resting], r: 0.34, s: 0.62 }
+      ? { pt: resting === 'name' ? nameCentre() : ANCHORS[resting], r: 0.34, s: 0.62 }
       : hovered
         ? { pt: ANCHORS[hovered], r: 0.22, s: 0.42 }
         : { pt: PIANO_CENTRE, r: 0.46, s: 0.3 };
@@ -1140,6 +1223,19 @@ export const createPianoScene = (
     seamB.copy(seamEnds[1]).project(camera);
     const keyDots = Math.hypot(((seamA.x - seamB.x) / 2) * target.width, ((seamA.y - seamB.y) / 2) * target.height) / WHITE_KEYS.length;
     seams.visible = keyDots >= 2.7;
+
+    /* how many dots apart the staff lines are right now, and so how dark the score should be */
+    if (!pageEndsReady) {
+      desk.updateMatrixWorld(true);
+      desk.localToWorld(pageTop);
+      desk.localToWorld(pageFoot);
+      pageEndsReady = true;
+    }
+    seamA.copy(pageTop).project(camera);
+    seamB.copy(pageFoot).project(camera);
+    const pageDots = Math.hypot(((seamA.x - seamB.x) / 2) * target.width, ((seamA.y - seamB.y) / 2) * target.height);
+    const lineDots = (pageDots * 0.0028) / 0.27;
+    INK_LINE.color.lerpColors(INK_FAR, INK_NEAR, Math.min(1, Math.max(0, (lineDots - 0.45) / 1.1)));
 
     if (!hidden) {
       renderer.render(scene, camera);
