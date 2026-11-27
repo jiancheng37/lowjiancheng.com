@@ -578,6 +578,55 @@ body {
 .toc li.is-open b { text-decoration: underline; text-underline-offset: 4px; }
 .toc li.is-open .fold-mark { opacity: 1; }
 
+/* ── the first-visit intro: the stage is dark, so everything waits; when the light is up the labels switch on in turn ── */
+.is-intro .leaders,
+.is-intro .tags,
+.is-intro .play,
+.is-intro .play-note,
+.is-intro .reset-view { opacity: 0; pointer-events: none; }
+.is-lit .tag { animation: label-on 160ms linear both; animation-delay: calc(var(--k, 0) * 110ms); }
+.is-lit .leaders { animation: label-on 160ms linear both; }
+.is-lit .play { animation: label-on 160ms linear 760ms both; }
+
+@keyframes label-on {
+  0%,
+  60% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes label-off {
+  0%,
+  40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* the visitor's number, stamped in the corner while the lights come up */
+.visitor-stamp {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 40;
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.is-intro .visitor-stamp { animation: switch-on 1ms step-start 950ms forwards; }
+.is-lit .visitor-stamp { opacity: 1; animation: label-off 160ms linear 1300ms forwards; }
+
+/* about me: the counter window */
+.visitor-n {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--paper);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+}
+
 /* ── narrow screens ── */
 .is-narrow .tag-fig { display: none; }
 .is-narrow .tag-label { font-size: 15px; }

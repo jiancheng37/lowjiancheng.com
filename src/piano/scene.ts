@@ -41,6 +41,10 @@ export type PianoScene = {
   /* hand the piano a transcription and a clock (seconds into the recording); null stops it */
   setSong: (song: { track: SongTrack; time: () => number } | null) => void;
   /* the darkroom: glide into the bench camera's lens, come back out to the bench, and stop drawing while covered */
+  /* the first visit: a dark stage with the name glowing on the closed lid; the light warms up, the camera comes
+     down and the lid swings open. Skip jumps straight to the end */
+  playIntro: (onDone: () => void) => void;
+  skipIntro: () => void;
   /* a role on the work page is being pointed at: its string shivers (null lets it ring out) */
   setRole: (index: number | null) => void;
   flyIntoLens: (onDone: () => void) => void;
@@ -317,7 +321,8 @@ export const createPianoScene = (
   spot.shadow.bias = -0.0004;
   spot.shadow.normalBias = 0.02;
   scene.add(spot, spot.target);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x1a1a1a, 0.1));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x1a1a1a, 0.1);
+  scene.add(hemi);
   const rim = new THREE.DirectionalLight(0xffffff, 1.4);
   rim.position.set(-2.6, 2.4, -3.4);
   scene.add(rim);
@@ -656,18 +661,26 @@ export const createPianoScene = (
     decal.userData.part = 'name';
     lid.add(decal);
   });
-  lid.rotation.z = 0.84;
+  const LID_OPEN = 0.84;
+  lid.rotation.z = LID_OPEN;
   piano.add(lid);
   lid.updateMatrixWorld(true);
   ANCHORS.name.copy(lid.localToWorld(V(1.05, 0.03, -1.2)));
-  const propTop = lid.localToWorld(V(0.58, 0, -1.42));
   const propBottom = V(-0.1, 0.945, -1.42);
-  const propLen = propTop.distanceTo(propBottom);
+  const propLen = lid.localToWorld(V(0.58, 0, -1.42)).distanceTo(propBottom);
   const prop = mesh(new THREE.CylinderGeometry(0.011, 0.011, propLen, 8), lacquer, { part: 'name' });
-  prop.position.copy(propTop).add(propBottom).multiplyScalar(0.5);
-  prop.quaternion.setFromUnitVectors(V(0, 1, 0), propTop.clone().sub(propBottom).normalize());
   prop.castShadow = false;
   piano.add(prop);
+  /* set the lid to an angle and keep the prop stick reaching from the case up to its socket under the lid */
+  const setLid = (angle: number) => {
+    lid.rotation.z = angle;
+    lid.updateMatrixWorld(true);
+    const top = lid.localToWorld(V(0.58, 0, -1.42));
+    prop.position.copy(top).add(propBottom).multiplyScalar(0.5);
+    prop.quaternion.setFromUnitVectors(V(0, 1, 0), top.clone().sub(propBottom).normalize());
+    prop.scale.set(1, Math.max(0.01, top.distanceTo(propBottom) / propLen), 1);
+  };
+  setLid(LID_OPEN);
 
   /* the metronome, ticking at 96 — "what's next" */
   const metronome = new THREE.Group();
@@ -896,6 +909,40 @@ export const createPianoScene = (
     const pos = centre.clone().addScaledVector(face, d * 0.95).add(V(0, d * 0.18, 0));
     return { pos, target: centre, off: 1 };
   };
+  /* the intro: lights out, looking down from the bass side on the closed lid, so the lettering (which glows on
+     its own) is the first thing there. The light flickers up like a stage lamp, then the camera glides round to
+     the usual view while the lid swings up onto its prop */
+  const LIGHTS: [THREE.Light, number][] = [
+    [spot, 170],
+    [rim, 1.4],
+    [bounce, 5],
+    [hemi, 0.1],
+  ];
+  const setLights = (level: number) => LIGHTS.forEach(([l, full]) => (l.intensity = full * level));
+  const FLICKER: [number, number][] = [
+    [0, 0],
+    [380, 0.3],
+    [460, 0.04],
+    [600, 0.55],
+    [690, 0.2],
+    [880, 1],
+  ];
+  let intro: { t0: number; flown: boolean; done: () => void } | null = null;
+  const introView = (): View => {
+    setLid(0);
+    const centre = lid.localToWorld(V(NAME_SPOT.x, 0.025, NAME_SPOT.z));
+    const k = narrow ? 1.7 : 1;
+    return { pos: centre.clone().add(V(-1.0 * k, 2.45 * k, 0)), target: centre, off: 0 };
+  };
+  const endIntro = () => {
+    if (!intro) return;
+    const { done } = intro;
+    intro = null;
+    setLights(1);
+    setLid(LID_OPEN);
+    done();
+  };
+
   const closeView = (p: PartId): View =>
     p === 'name' ? nameView() : { pos: CLOSE[p].pos.clone(), target: CLOSE[p].target.clone(), off: 1 };
   let resting: PartId | null = null;
@@ -1112,6 +1159,22 @@ export const createPianoScene = (
 
     /* the notebook: the cover swinging on its spine, then any page turns queued up behind it */
     const now = performance.now();
+    if (intro) {
+      const t = now - intro.t0;
+      let level = 0;
+      FLICKER.forEach(([at, v]) => {
+        if (t >= at) level = v;
+      });
+      setLights(level);
+      setLid(LID_OPEN * ease(Math.min(1, Math.max(0, (t - 900) / 1300))));
+      if (!intro.flown && t >= 650) {
+        intro.flown = true;
+        orbit = { ...orbitGoal };
+        flyView(homeView(), undefined, 1700);
+      }
+      if (t >= 2400 && !tween) endIntro();
+    }
+
     if (coverAnim && now >= coverAnim.t0) {
       const p = Math.min(1, (now - coverAnim.t0) / coverAnim.dur);
       flap.rotation.z = coverAnim.from + (coverAnim.to - coverAnim.from) * ease(p);
@@ -1179,7 +1242,7 @@ export const createPianoScene = (
         done?.();
       }
     }
-    if (!tween && resting === null) {
+    if (!tween && resting === null && !intro) {
       const k = reduceMotion ? 1 : 0.18;
       orbit.az += (orbitGoal.az - orbit.az) * k;
       orbit.pol += (orbitGoal.pol - orbit.pol) * k;
@@ -1312,7 +1375,7 @@ export const createPianoScene = (
   const ndc = new THREE.Vector2();
 
   /* swing the camera to a view around its target rather than cutting straight through the piano */
-  const flyView = (to: View, onDone?: () => void) => {
+  const flyView = (to: View, onDone?: () => void, durFixed?: number) => {
     const from: View = { pos: camera.position.clone(), target: cur.target.clone(), off: cur.off };
     cur.pos.copy(from.pos);
     if (reduceMotion) {
@@ -1324,7 +1387,7 @@ export const createPianoScene = (
       return;
     }
     const travel = from.pos.distanceTo(to.pos) + from.target.distanceTo(to.target) * 0.5;
-    const dur = Math.min(1100, Math.max(700, 620 + travel * 150));
+    const dur = durFixed ?? Math.min(1100, Math.max(700, 620 + travel * 150));
     const a = new THREE.Spherical().setFromVector3(from.pos.clone().sub(from.target));
     const b = new THREE.Spherical().setFromVector3(to.pos.clone().sub(to.target));
     tween = { from, to, a, b, t0: performance.now(), dur, done: onDone };
@@ -1343,7 +1406,7 @@ export const createPianoScene = (
       renderer.setSize(lw, lh, false);
       target.setSize(lw, lh);
       camera.aspect = w / h;
-      if (!tween) {
+      if (!tween && !intro) {
         const v = bookMode ? bookView() : resting ? closeView(resting) : homeView();
         cur.pos.copy(v.pos);
         cur.target.copy(v.target);
@@ -1398,6 +1461,29 @@ export const createPianoScene = (
     },
     setRole(index) {
       roleHot = index;
+    },
+    playIntro(onDone) {
+      if (reduceMotion) {
+        onDone();
+        return;
+      }
+      const start = introView();
+      tween = null;
+      cur.pos.copy(start.pos);
+      cur.target.copy(start.target);
+      cur.off = 0;
+      setLights(0);
+      intro = { t0: performance.now(), flown: false, done: onDone };
+    },
+    skipIntro() {
+      if (!intro) return;
+      tween = null;
+      orbit = { ...orbitGoal };
+      const home = homeView();
+      cur.pos.copy(home.pos);
+      cur.target.copy(home.target);
+      cur.off = 0;
+      endIntro();
     },
     flyIntoLens(onDone) {
       piano.updateMatrixWorld(true);
