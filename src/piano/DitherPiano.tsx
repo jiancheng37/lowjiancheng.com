@@ -1,4 +1,5 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { GlyphKey } from './nameDots';
 import { createPianoScene, FrameInfo, PartId, PART_IDS, PianoScene, ScreenPoint, SongTrack } from './scene';
 import { developPhoto, STILL } from './dither';
 import { GALLERY, Photo } from './gallery';
@@ -65,6 +66,39 @@ const OFFSETS: Record<PartId, [number, number, number, number]> = {
 /* a role, with the company's logo as a 1-bit stencil painted in the site's off-white */
 /* each role is one of the piano's strings; pointing at a role makes its string shiver */
 const StringsContext = React.createContext<(index: number | null) => void>(() => undefined);
+/* the name page's dictionary rows write their character onto the lid */
+const GlyphContext = React.createContext<(key: GlyphKey | null) => void>(() => undefined);
+
+/* a dictionary row: pointing at it (or focusing it) writes the character on the lid; on touch, a tap pins it
+   there until tapped again */
+const GlyphRow: React.FC<{ k: GlyphKey; children: React.ReactNode }> = ({ k, children }) => {
+  const write = useContext(GlyphContext);
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => () => write(null), [write]);
+  return (
+    <li
+      className={`glyph-row${pinned ? ' is-pinned' : ''}`}
+      tabIndex={0}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && write(k)}
+      onPointerLeave={(e) => {
+        if (e.pointerType === 'mouse' && !pinned) write(null);
+      }}
+      onFocus={() => write(k)}
+      onBlur={() => {
+        setPinned(false);
+        write(null);
+      }}
+      onClick={(e) => {
+        if ((e.nativeEvent as PointerEvent).pointerType === 'mouse') return;
+        const next = !pinned;
+        setPinned(next);
+        write(next ? k : null);
+      }}
+    >
+      {children}
+    </li>
+  );
+};
 
 const Job: React.FC<{ index: number; logo: string; year: string; name: string; role: string; note?: string }> = ({
   index,
@@ -235,10 +269,10 @@ const VisitorHi: React.FC = () => {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [n]);
-  if (n === null) return <>hi</>;
+  if (n === null) return <>hey</>;
   return (
     <>
-      hi visitor no. <span className="visitor-n">{counterDigits(shown)}</span>
+      hey visitor no. <span className="visitor-n">{counterDigits(shown)}</span>
     </>
   );
 };
@@ -248,16 +282,12 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
     title: 'about me.',
     body: (
       <>
-        <figure className="read-photo">
-          <img src={`${process.env.PUBLIC_URL}/profile-photo.png`} alt="Jian Cheng crouching next to a deer in Nara" />
-          <figcaption>fig. 1 — nara, with a friend</figcaption>
-        </figure>
         <p>
-          <VisitorHi />, i'm jian cheng — a final-year computer science student at NUS, in singapore.
+          <VisitorHi />, i'm jian cheng — a final-year cs student at nus and an aspiring software engineer based in singapore.
         </p>
-        <p>i build software the way i like to play: slowly, carefully, then all at once. next year i join autodesk in january, then stripe in july.</p>
-        <p>also, in no particular order: a pianist, an f1 fanatic, and a (semi) retired police officer.</p>
-        <p>right now, i'm trying to do more with less — using ai.</p>
+        <p>i write code same the way i like to play the piano: mostly improvising, heavily caffeinated, and praying i hit the right keys.</p>
+        <p>also, in no particular order: a horrible pickleball player, an f1 fanatic, and a (semi) retired police officer.</p>
+        <p>currently, i'm trying to figure how to do more with less using ai. (hence, this website!)</p>
       </>
     ),
   },
@@ -267,7 +297,7 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
       <>
         <p>my parents named me 建成 — build, then succeed. that's quite a lot of responsibility for one newborn.</p>
         <ul className="glyphs">
-          <li>
+          <GlyphRow k="jian">
             <span className="glyph" lang="zh-Hans">
               建
             </span>
@@ -276,8 +306,8 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
               <i>verb</i>
               <span>to build; to construct. to establish; to found — a city, an institution, a habit.</span>
             </span>
-          </li>
-          <li>
+          </GlyphRow>
+          <GlyphRow k="cheng">
             <span className="glyph" lang="zh-Hans">
               成
             </span>
@@ -286,7 +316,7 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
               <i>verb · adj.</i>
               <span>to accomplish; to bring off. to succeed — to become the thing intended.</span>
             </span>
-          </li>
+          </GlyphRow>
         </ul>
         <p className="say">
           <span>
@@ -378,17 +408,18 @@ const BLADE_EDGES = HEX.map(([x, y], i) => {
 });
 
 /* a print on the line, drawn in the site's own dots. When the room opens it develops out of the dark,
-   brightest parts first; hover (or tap) to see the photograph itself */
-const Print: React.FC<{ photo: Photo; index: number; slot: number; develop: boolean; seen: boolean; dot: number }> = ({
-  photo,
-  index,
-  slot,
-  develop,
-  seen,
-  dot,
-}) => {
+   brightest parts first; hover (or tap) and the photograph itself comes through, and stays */
+const Print: React.FC<{
+  photo: Photo;
+  index: number;
+  slot: number;
+  develop: boolean;
+  seen: boolean;
+  dot: number;
+  revealed: boolean;
+  onReveal: (file: string) => void;
+}> = ({ photo, index, slot, develop, seen, dot, revealed, onReveal }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [full, setFull] = useState(false);
   const src = `${process.env.PUBLIC_URL}/gallery/${photo.file}`;
 
   useEffect(() => {
@@ -398,16 +429,17 @@ const Print: React.FC<{ photo: Photo; index: number; slot: number; develop: bool
 
   return (
     <li
-      className={`print${full ? ' is-full' : ''}${seen ? ' is-seen' : ''}`}
+      className={`print${revealed ? ' is-full' : ''}${seen ? ' is-seen' : ''}`}
       data-n={index}
-      style={{ '--tilt': `${TILTS[index % TILTS.length]}deg`, '--n': slot } as React.CSSProperties}
+      style={{ '--tilt': `${TILTS[index % TILTS.length]}deg`, '--n': slot, '--g': index } as React.CSSProperties}
     >
       <span className="peg" aria-hidden="true" />
       <button
         type="button"
         className="print-frame"
-        onClick={() => setFull((v) => !v)}
-        aria-pressed={full}
+        onPointerEnter={() => onReveal(photo.file)}
+        onClick={() => onReveal(photo.file)}
+        aria-pressed={revealed}
         aria-label={photo.alt}
       >
         <canvas ref={canvasRef} className="print-dots" />
@@ -420,6 +452,9 @@ const Print: React.FC<{ photo: Photo; index: number; slot: number; develop: bool
   );
 };
 
+const LOOKED_KEY = 'jc-darkroom-looked';
+const LIGHTROOM_KEY = 'jc-lightroom';
+
 /* one long line of prints; the wheel (or a sideways swipe) glides along it, and each print develops as it comes into view */
 const Darkroom: React.FC<{ developing: boolean; dot: number; narrow: boolean; onLeave: () => void }> = ({
   developing,
@@ -429,7 +464,64 @@ const Darkroom: React.FC<{ developing: boolean; dot: number; narrow: boolean; on
 }) => {
   const roomRef = useRef<HTMLElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
+  const lampRef = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState<Set<number>>(() => new Set());
+
+  /* which photos have been looked at (kept, so they stay revealed), and whether the lights have come on */
+  const [revealed, setRevealed] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(window.localStorage.getItem(LOOKED_KEY) || '[]'));
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [lights, setLights] = useState<'dark' | 'switching' | 'half' | 'light'>(() => {
+    try {
+      return window.localStorage.getItem(LIGHTROOM_KEY) ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+  const reveal = useCallback(
+    (file: string) =>
+      setRevealed((had) => {
+        if (had.has(file)) return had;
+        const next = new Set(had).add(file);
+        try {
+          window.localStorage.setItem(LOOKED_KEY, JSON.stringify(Array.from(next)));
+        } catch {
+          /* private mode: they stay revealed for this visit */
+        }
+        return next;
+      }),
+    [],
+  );
+
+  /* the easter egg: every print looked at, and someone turns the lights on. A light floods in behind the line through
+     the dots; halfway, the words and frames turn over to dark on light; then the whole room is lit, the photographs
+     come up in their own colours one after another, and the darkroom is a lightroom */
+  const switchedOn = useRef(lights !== 'dark');
+  useEffect(() => {
+    if (switchedOn.current || !developing || !GALLERY.every((p) => revealed.has(p.file))) return;
+    switchedOn.current = true;
+    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, STILL ? 0 : ms));
+    (async () => {
+      await wait(700); // a beat to take in the last one
+      const lamp = lampRef.current;
+      if (lamp) setDotMask(lamp, 0);
+      setLights('switching');
+      try {
+        window.localStorage.setItem(LIGHTROOM_KEY, '1');
+      } catch {
+        /* it just won't be remembered */
+      }
+      const flood = lamp ? dissolve([lamp], true, STILL ? 1 : 820) : Promise.resolve();
+      await wait(410);
+      setLights('half');
+      await flood;
+      setLights('light');
+    })();
+  }, [revealed, developing]);
 
   /* turn vertical wheel movement into travel along the line (a non-passive listener, so the page itself stays put) */
   useEffect(() => {
@@ -469,21 +561,30 @@ const Darkroom: React.FC<{ developing: boolean; dot: number; narrow: boolean; on
     return () => io.disconnect();
   }, [developing]);
 
+  const lit = lights === 'half' || lights === 'light';
+
   return (
     <section
       ref={roomRef}
-      className={`darkroom${developing ? ' is-shown' : ''}`}
+      className={`darkroom${developing ? ' is-shown' : ''}${lights === 'switching' || lights === 'half' ? ' is-switching' : ''}${
+        lights === 'half' ? ' is-half' : ''
+      }${lights === 'light' ? ' is-light' : ''}`}
       aria-labelledby="darkroom-title"
       onClick={(e) => {
         if (!(e.target as Element).closest('.print, .darkroom-close')) onLeave();
       }}
     >
+      <div className="lamp" ref={lampRef} aria-hidden="true" />
       <button type="button" className="darkroom-close" onClick={onLeave} aria-label="Back to the bench">
         ×
       </button>
       <header>
         <p className="read-fig">fig. g — the camera</p>
-        <DitherTitle text="darkroom." id="darkroom-title" />
+        <DitherTitle
+          key={lit ? 'light' : 'dark'}
+          text={lit ? 'lightroom.' : 'darkroom.'}
+          id="darkroom-title"
+        />
       </header>
       <div className="prints-window" ref={lineRef}>
         <ul className="prints">
@@ -496,6 +597,8 @@ const Darkroom: React.FC<{ developing: boolean; dot: number; narrow: boolean; on
               develop={developing && seen.has(i)}
               seen={seen.has(i)}
               dot={dot}
+              revealed={revealed.has(p.file)}
+              onReveal={reveal}
             />
           ))}
         </ul>
@@ -1066,6 +1169,7 @@ const DitherPiano: React.FC = () => {
   }, [intro]);
 
   const pluckRole = useCallback((index: number | null) => sceneRef.current?.setRole(index), []);
+  const writeGlyph = useCallback((key: GlyphKey | null) => sceneRef.current?.nameGlyph(key), []);
 
   const hoverPart = useCallback((id: PartId | null) => {
     setHover(id);
@@ -1283,6 +1387,7 @@ const DitherPiano: React.FC = () => {
   return (
     <BookContext.Provider value={bookCtx}>
     <StringsContext.Provider value={pluckRole}>
+    <GlyphContext.Provider value={writeGlyph}>
     <div
       className={`onebit phase-${phase}${narrow ? ' is-narrow' : ''}${hover ? ' has-hover' : ''}${
         intro === 'playing' ? ' is-intro' : intro === 'lit' ? ' is-lit' : ''
@@ -1555,6 +1660,7 @@ const DitherPiano: React.FC = () => {
         )}
       </article>
     </div>
+    </GlyphContext.Provider>
     </StringsContext.Provider>
     </BookContext.Provider>
   );

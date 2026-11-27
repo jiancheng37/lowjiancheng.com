@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createNameDots, GlyphKey } from './nameDots';
 
 /* ──────────────────────────────────────────────────────────────────────────
    A grand piano under one stage light, rendered at low resolution and then
@@ -42,6 +43,8 @@ export type PianoScene = {
   setSong: (song: { track: SongTrack; time: () => number } | null) => void;
   /* concert mode: the camera glides down to a low three-quarter view of the keys and drifts there; off flies home */
   setConcert: (on: boolean) => void;
+  /* the lettering on the lid: write a character in place of the name, or bring the name back */
+  nameGlyph: (key: GlyphKey | null) => void;
   /* the darkroom: glide into the bench camera's lens, come back out to the bench, and stop drawing while covered */
   /* the first visit: a dark stage with the name glowing on the closed lid; the light warms up, the camera comes
      down and the lid swings open. Skip jumps straight to the end */
@@ -613,34 +616,20 @@ export const createPianoScene = (
   lidPanel.castShadow = false;
   lid.add(lidPanel);
   /* the owner's name, lettered on the lid like a maker's mark (underside and top) */
+  /* drawn in dots (see nameDots), so the name can give way to 建 or 成 written stroke by stroke. The canvas is
+     tall enough for a character */
   const nameCanvas = document.createElement('canvas');
   nameCanvas.width = 1024;
-  nameCanvas.height = 208;
+  nameCanvas.height = 512;
   const nameTex = new THREE.CanvasTexture(nameCanvas);
   nameTex.colorSpace = THREE.SRGBColorSpace;
   nameTex.anisotropy = 4;
-  const drawName = () => {
-    const g = nameCanvas.getContext('2d')!;
-    g.clearRect(0, 0, nameCanvas.width, nameCanvas.height);
-    let size = 176;
-    g.font = `500 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`;
-    const w = g.measureText('jian cheng').width;
-    if (w > 940) {
-      size = Math.floor((size * 940) / w);
-      g.font = `500 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`;
-    }
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.lineJoin = 'round';
-    g.lineWidth = 22;
-    g.strokeStyle = '#000';
-    g.strokeText('jian cheng', 512, 112);
-    g.fillStyle = '#fff';
-    g.fillText('jian cheng', 512, 112);
-    nameTex.needsUpdate = true;
-  };
-  drawName();
-  document.fonts?.load("500 176px Geist").then(drawName).catch(() => undefined);
+  const nameDots = createNameDots(nameCanvas, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  nameTex.needsUpdate = true;
+  document.fonts
+    ?.load('500 176px Geist')
+    .then(() => nameDots.resample())
+    .catch(() => undefined);
   const nameMat = new THREE.MeshBasicMaterial({
     map: nameTex,
     transparent: true,
@@ -655,7 +644,7 @@ export const createPianoScene = (
     [-0.003, Math.PI / 2, Math.PI / 2],
     [0.025, -Math.PI / 2, -Math.PI / 2],
   ] as [number, number, number][]).forEach(([y, flip, turn]) => {
-    const g = new THREE.PlaneGeometry(0.96, 0.195);
+    const g = new THREE.PlaneGeometry(0.96, 0.48);
     g.rotateX(flip);
     g.rotateY(turn);
     const decal = new THREE.Mesh(g, nameMat);
@@ -1171,6 +1160,7 @@ export const createPianoScene = (
 
     /* the notebook: the cover swinging on its spine, then any page turns queued up behind it */
     const now = performance.now();
+    if (nameDots.step(now)) nameTex.needsUpdate = true;
     if (intro) {
       const t = now - intro.t0;
       let level = 0;
@@ -1477,6 +1467,9 @@ export const createPianoScene = (
       song = next;
       lastOnset.clear();
     },
+    nameGlyph(key) {
+      nameDots.setGlyph(key);
+    },
     setConcert(on) {
       if (on === !!concert) return;
       if (on) {
@@ -1546,6 +1539,7 @@ export const createPianoScene = (
     },
     flyTo(part, onDone) {
       if (!part) orbit = { ...orbitGoal };
+      if (part !== 'name') nameDots.setGlyph(null);
       resting = part;
       flyView(part ? closeView(part) : homeView(), onDone);
     },

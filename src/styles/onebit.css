@@ -357,7 +357,13 @@ body {
   border-bottom: 2px dotted rgb(236 232 222 / 45%);
 }
 
-.glyph { font-size: 64px; line-height: 1; font-weight: 500; }
+.glyph { justify-self: start; padding: 4px 6px; font-size: 64px; line-height: 1; font-weight: 500; }
+
+/* pointing at a row writes its character on the lid; the character inverts while it's there */
+.glyph-row { cursor: default; outline: none; }
+.glyph-row:hover .glyph,
+.glyph-row:focus-visible .glyph,
+.glyph-row.is-pinned .glyph { background: var(--paper); color: var(--ink); }
 .glyph-def { min-width: 0; }
 .glyph-def b { font-family: var(--sans); font-weight: 500; font-size: 22px; letter-spacing: -0.02em; margin-right: 10px; }
 .glyph-def i { font-size: 12px; opacity: 0.6; }
@@ -415,24 +421,6 @@ body {
 
 .fold-body p { margin: 0 0 10px; max-width: 46ch; }
 
-.read-photo {
-  float: right;
-  width: 140px;
-  margin: 0 0 12px 20px;
-  padding: 5px 5px 4px;
-  border: 2px solid var(--paper);
-}
-
-.read-photo img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  filter: grayscale(1) contrast(1.35);
-  image-rendering: pixelated;
-}
-
-.read-photo figcaption { margin-top: 4px; font-family: var(--mono); font-size: 11px; line-height: 1.4; }
 
 .read-links { margin: 14px 0 0; padding: 0; list-style: none; }
 
@@ -617,7 +605,7 @@ body {
 }
 
 .print-frame:focus-visible { outline: 1px dashed var(--paper); outline-offset: 3px; }
-.print.is-full .print-frame { cursor: zoom-out; }
+.print.is-full .print-frame { cursor: default; }
 .print-dots { display: block; width: 100%; aspect-ratio: 2 / 3; image-rendering: pixelated; }
 
 .print-full {
@@ -629,14 +617,29 @@ body {
   object-fit: cover;
   filter: grayscale(1) contrast(1.15);
   opacity: 0;
-  transition: opacity 240ms steps(4);
+  transition: opacity 240ms steps(4), filter 1200ms steps(8) calc(var(--g, 0) * 160ms);
 }
 
 .print.is-full .print-full { opacity: 1; }
 
-@media (hover: hover) {
-  .print:hover .print-full { opacity: 1; }
+
+/* the easter egg: every print looked at and the lights come on. A lamp floods in behind the line through the dots;
+   halfway the words and frames turn over to dark on light, then the whole room is lit and the photographs take
+   their colour back, one after another: the darkroom becomes a lightroom */
+.lamp { position: absolute; inset: 0; z-index: 0; background: #ece8de; visibility: hidden; pointer-events: none; }
+.darkroom.is-switching .lamp { visibility: visible; }
+.darkroom > header,
+.darkroom > .prints-window { position: relative; z-index: 1; color: var(--paper); }
+
+.darkroom.is-half > header,
+.darkroom.is-half > .prints-window,
+.darkroom.is-light {
+  --ink: #ece8de;
+  --paper: #1b1a1d;
 }
+
+.darkroom.is-half .print-full,
+.darkroom.is-light .print-full { filter: none; }
 
 .print-cap { display: block; margin-top: 8px; font-family: var(--mono); font-size: 11px; opacity: 0; }
 .is-shown .print.is-seen .print-cap { animation: switch-on 1ms step-start forwards; animation-delay: calc(1900ms + var(--n) * 260ms); }
@@ -773,7 +776,6 @@ body {
 }
 
 .is-narrow .read-title { font-size: 46px; margin-bottom: 16px; }
-.is-narrow .read-photo { width: 104px; }
 .is-narrow .read-links a { font-size: 26px; }
 .is-narrow .fold-body { padding-left: 0; }
 .is-narrow .glyph { font-size: 52px; }
