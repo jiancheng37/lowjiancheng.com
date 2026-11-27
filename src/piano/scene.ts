@@ -40,6 +40,8 @@ export type PianoScene = {
   pressKey: (midi: number) => void;
   /* hand the piano a transcription and a clock (seconds into the recording); null stops it */
   setSong: (song: { track: SongTrack; time: () => number } | null) => void;
+  /* concert mode: the camera glides down to a low three-quarter view of the keys and drifts there; off flies home */
+  setConcert: (on: boolean) => void;
   /* the darkroom: glide into the bench camera's lens, come back out to the bench, and stop drawing while covered */
   /* the first visit: a dark stage with the name glowing on the closed lid; the light warms up, the camera comes
      down and the lid swings open. Skip jumps straight to the end */
@@ -947,6 +949,16 @@ export const createPianoScene = (
     p === 'name' ? nameView() : { pos: CLOSE[p].pos.clone(), target: CLOSE[p].target.clone(), off: 1 };
   let resting: PartId | null = null;
   const cur: View = homeView();
+  /* concert mode: low and close, front-right of the keyboard, swaying slowly side to side around the lid */
+  let concert: { t0: number } | null = null;
+  const concertView = (now: number): View => {
+    const sway = reduceMotion ? 0 : Math.sin(((now - (concert?.t0 ?? now)) / 26000) * Math.PI * 2);
+    const az = 0.72 + 0.26 * sway;
+    const pol = 1.26 - 0.05 * sway;
+    const dist = narrow ? 5.3 : 3.05;
+    const target = V(-0.08, narrow ? 0.88 : 0.86, -0.3);
+    return { pos: new THREE.Vector3().setFromSphericalCoords(dist, pol, az).add(target), target, off: 0 };
+  };
   let hidden = false;
   /* a straight glide along the lens axis, curving in from wherever the camera was */
   let dolly: {
@@ -1242,7 +1254,13 @@ export const createPianoScene = (
         done?.();
       }
     }
-    if (!tween && resting === null && !intro) {
+    if (!tween && concert) {
+      const v = concertView(now);
+      cur.pos.copy(v.pos);
+      cur.target.copy(v.target);
+      cur.off = 0;
+    }
+    if (!tween && resting === null && !intro && !concert) {
       const k = reduceMotion ? 1 : 0.18;
       orbit.az += (orbitGoal.az - orbit.az) * k;
       orbit.pol += (orbitGoal.pol - orbit.pol) * k;
@@ -1407,7 +1425,7 @@ export const createPianoScene = (
       target.setSize(lw, lh);
       camera.aspect = w / h;
       if (!tween && !intro) {
-        const v = bookMode ? bookView() : resting ? closeView(resting) : homeView();
+        const v = concert ? concertView(performance.now()) : bookMode ? bookView() : resting ? closeView(resting) : homeView();
         cur.pos.copy(v.pos);
         cur.target.copy(v.target);
         cur.off = v.off;
@@ -1458,6 +1476,18 @@ export const createPianoScene = (
     setSong(next) {
       song = next;
       lastOnset.clear();
+    },
+    setConcert(on) {
+      if (on === !!concert) return;
+      if (on) {
+        /* start the sway where the glide lands, so there's no jump when it takes over */
+        concert = { t0: performance.now() + 1700 };
+        flyView(concertView(concert.t0), undefined, 1700);
+      } else {
+        concert = null;
+        orbit = { ...orbitGoal };
+        flyView(homeView(), undefined, 1200);
+      }
     },
     setRole(index) {
       roleHot = index;

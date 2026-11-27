@@ -36,12 +36,19 @@ body {
   touch-action: none;
 }
 
-/* ── the song button ── */
-.play {
+/* ── the song button, with concert mode and the setlist's tab beside it ── */
+.deck {
   position: fixed;
   right: 16px;
   bottom: 16px;
   z-index: 40;
+  display: flex;
+  align-items: stretch;
+  max-width: calc(100vw - 32px);
+}
+
+.play {
+  min-width: 0;
   padding: 3px 10px;
   border: 2px solid var(--paper);
   background: var(--ink);
@@ -51,11 +58,11 @@ body {
   cursor: pointer;
 }
 
-.reset-view {
-  position: fixed;
-  right: 188px;
-  bottom: 16px;
-  z-index: 40;
+.song-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.concert-on {
+  flex: none;
+  margin-right: 9px;
   padding: 3px 10px;
   border: 2px solid var(--paper);
   background: var(--ink);
@@ -63,14 +70,39 @@ body {
   font-family: var(--mono);
   font-size: 12px;
   cursor: pointer;
+  animation: switch-on 1ms step-start both;
+}
+
+.concert-on:hover,
+.concert-on:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+
+/* concert mode: every label, note and button switches off; a clear layer over the screen takes any click, tap,
+   drag or scroll as the way out */
+.is-concert .leaders,
+.is-concert .tags,
+.is-concert .deck,
+.is-concert .play-note,
+.is-concert .cam-callout,
+.is-concert .visitor-stamp { opacity: 0; pointer-events: none; }
+
+.concert-veil { position: fixed; inset: 0; z-index: 50; outline: none; }
+
+.concert-hint {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  margin: 0;
+  padding: 0 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms ease;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
-.reset-view.is-shown { opacity: 1; pointer-events: auto; }
-.reset-view:hover,
-.reset-view:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.concert-hint.is-shown { animation: switch-on 1ms step-start 1700ms forwards; }
 
 .play:hover,
 .play:focus-visible,
@@ -97,10 +129,92 @@ body {
 }
 
 .play-note.is-shown { visibility: visible; animation: switch-on 1ms step-start 1400ms forwards; }
-.play-note span { padding: 0 4px; background: var(--ink); white-space: nowrap; }
-.play-note svg { flex: none; overflow: visible; }
-.play-note path { fill: none; stroke: var(--paper); stroke-width: 2; }
-.play-note .play-note-line { stroke-dasharray: 4 4; }
+:is(.play-note, .request-note) span { padding: 0 4px; background: var(--ink); white-space: nowrap; }
+:is(.play-note, .request-note) svg { flex: none; overflow: visible; }
+:is(.play-note, .request-note) path { fill: none; stroke: var(--paper); stroke-width: 2; }
+:is(.play-note, .request-note) .play-note-line { stroke-dasharray: 4 4; }
+
+/* the setlist's tab: blinks on a few seconds into blue, then sits on the song button's left edge */
+.setlist-anchor { position: relative; display: flex; flex: none; margin-right: -2px; }
+
+.setlist-toggle {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.setlist-toggle svg { fill: currentColor; shape-rendering: crispEdges; }
+.setlist-toggle:hover,
+.setlist-toggle:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.setlist-toggle.is-fresh { animation: blink-on 480ms steps(1, end) both; }
+
+@keyframes blink-on {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  50% { opacity: 0; }
+  75%,
+  100% { opacity: 1; }
+}
+
+/* a second margin note, pointing at the tab until it's first opened; its arrow tip lands on the tab's middle */
+.request-note {
+  position: absolute;
+  right: 5px;
+  bottom: calc(100% + 8px);
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.request-note.is-shown { visibility: visible; animation: switch-on 1ms step-start 700ms forwards; }
+
+/* the setlist itself: the other songs, each its own little box, switching on upward from the button */
+.setlist {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setlist li { display: flex; max-width: 100%; opacity: 0; animation: switch-on 1ms step-start forwards; animation-delay: calc(var(--k, 0) * 60ms); }
+
+.setlist button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 3px 10px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.setlist button:hover,
+.setlist button:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.setlist-fav { flex: none; font-size: 10px; opacity: 0.7; }
 
 /* ── labels with leader lines ── */
 .leaders,
@@ -583,10 +697,11 @@ body {
 .is-intro .tags,
 .is-intro .play,
 .is-intro .play-note,
-.is-intro .reset-view { opacity: 0; pointer-events: none; }
+.is-intro .setlist-anchor { opacity: 0; pointer-events: none; }
 .is-lit .tag { animation: label-on 160ms linear both; animation-delay: calc(var(--k, 0) * 110ms); }
 .is-lit .leaders { animation: label-on 160ms linear both; }
-.is-lit .play { animation: label-on 160ms linear 760ms both; }
+.is-lit .play,
+.is-lit .setlist-anchor { animation: label-on 160ms linear 760ms both; }
 
 @keyframes label-on {
   0%,
@@ -631,7 +746,8 @@ body {
 .is-narrow .tag-fig { display: none; }
 .is-narrow .tag-label { font-size: 15px; }
 .is-narrow .tag { padding: 2px 6px 3px; }
-.is-narrow .play { right: 12px; bottom: 12px; font-size: 12px; }
+.is-narrow .deck { right: 12px; bottom: 12px; max-width: calc(100vw - 24px); }
+.is-narrow .setlist { max-width: calc(100vw - 24px); }
 .is-narrow .play-note { right: 52px; bottom: 44px; font-size: 11px; }
 .is-narrow .play-note span { max-width: 160px; white-space: normal; text-align: right; }
 .is-narrow .darkroom { padding: 60px 20px 80px; }
@@ -642,8 +758,9 @@ body {
 .is-narrow .peg { display: none; }
 .is-narrow .print { width: min(76vw, 340px); transform: none; }
 .is-narrow .is-shown .print.is-seen { animation: none; }
-.is-narrow .reset-view { right: auto; left: 12px; bottom: 12px; }
-.is-narrow.phase-open .play:not(.is-on) { display: none; }
+.is-narrow.phase-open .play:not(.is-on),
+.is-narrow.phase-open .setlist-anchor,
+.is-narrow.phase-open .setlist { display: none; }
 
 .is-narrow .reading {
   top: 50vh;
@@ -674,4 +791,6 @@ body {
 
   .is-shown .print.is-seen { animation: none; }
   .is-shown .print.is-seen .print-cap { animation: none; opacity: 1; }
+  .setlist-toggle.is-fresh { animation: none; }
+  .setlist li { animation: none; opacity: 1; }
 }

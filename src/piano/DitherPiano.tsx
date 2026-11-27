@@ -22,12 +22,33 @@ const SECTIONS: Section[] = [
   { id: 'off', label: 'off the keys', fig: 'd', part: 'the bench' },
   { id: 'socials', label: 'socials', fig: 'e', part: 'the metronome' },
 ];
-const SONG = {
-  title: 'blue',
-  by: 'yung kai',
-  audio: `${process.env.PUBLIC_URL}/song/blue.mp3`,
-  track: `${process.env.PUBLIC_URL}/song/blue.json`,
-};
+/* the setlist. blue comes first and is what the button starts on; the rest open up once blue has been played.
+   Each needs public/song/<id>.mp3 and its transcription public/song/<id>.json */
+type Song = { id: string; title: string; by: string };
+const SONGS: Song[] = [
+  { id: 'blue', title: 'blue', by: 'yung kai' },
+  { id: 'so-easy', title: 'so easy (to fall in love)', by: 'olivia dean' },
+  { id: 'here-with-me', title: 'here with me', by: 'd4vd' },
+  { id: 'honeybee', title: 'honeybee', by: 'olivia rodrigo' },
+  { id: 'die-with-a-smile', title: 'die with a smile', by: 'lady gaga & bruno mars' },
+];
+const songUrl = (id: string, ext: 'mp3' | 'json') => `${process.env.PUBLIC_URL}/song/${id}.${ext}`;
+const songById = (id: string) => SONGS.find((s) => s.id === id) ?? SONGS[0];
+const SETLIST_KEY = 'jc-setlist';
+const SETLIST_DELAY = 4000; // how long blue plays before the rest of the setlist turns up
+
+const PlayIcon: React.FC<{ paused?: boolean }> = ({ paused }) => (
+  <svg className="play-icon" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+    {paused ? (
+      <>
+        <rect x="1" y="1" width="3" height="8" />
+        <rect x="6" y="1" width="3" height="8" />
+      </>
+    ) : (
+      <path d="M2 1 L9 5 L2 9 Z" />
+    )}
+  </svg>
+);
 
 const byId = Object.fromEntries(SECTIONS.map((s) => [s.id, s])) as Record<PartId, Section>;
 
@@ -193,8 +214,9 @@ const OffTheKeys: React.FC = () => {
   );
 };
 
-/* about me: which visitor you are, counted up like a mechanical counter each time the page opens */
-const VisitorLine: React.FC = () => {
+/* about me: the greeting names which visitor you are, counted up like a mechanical counter each time the page
+   opens. Until the number arrives (or if it never does) it's just "hi" */
+const VisitorHi: React.FC = () => {
   const n = useVisitor();
   const [shown, setShown] = useState(0);
   useEffect(() => {
@@ -213,11 +235,11 @@ const VisitorLine: React.FC = () => {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [n]);
-  if (n === null) return null;
+  if (n === null) return <>hi</>;
   return (
-    <p className="visitor">
-      you&apos;re visitor no. <span className="visitor-n">{counterDigits(shown)}</span>
-    </p>
+    <>
+      hi visitor no. <span className="visitor-n">{counterDigits(shown)}</span>
+    </>
   );
 };
 
@@ -230,11 +252,12 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
           <img src={`${process.env.PUBLIC_URL}/profile-photo.png`} alt="Jian Cheng crouching next to a deer in Nara" />
           <figcaption>fig. 1 — nara, with a friend</figcaption>
         </figure>
-        <p>hi, i'm jian cheng — a final-year computer science student at NUS, in singapore.</p>
+        <p>
+          <VisitorHi />, i'm jian cheng — a final-year computer science student at NUS, in singapore.
+        </p>
         <p>i build software the way i like to play: slowly, carefully, then all at once. next year i join autodesk in january, then stripe in july.</p>
         <p>also, in no particular order: a pianist, an f1 fanatic, and a (semi) retired police officer.</p>
         <p>right now, i'm trying to do more with less — using ai.</p>
-        <VisitorLine />
       </>
     ),
   },
@@ -519,7 +542,9 @@ const DitherPiano: React.FC = () => {
   const [hover, setHover] = useState<PartId | null>(null);
   const [playing, setPlaying] = useState(false);
   const [played, setPlayed] = useState(false); // once pressed, the note pointing at the button goes away
-  const [moved, setMoved] = useState(false);
+  /* concert mode: while a song plays, the camera settles on the keys and everything else gets out of the way */
+  const [concert, setConcert] = useState(false);
+  const [concertHint, setConcertHint] = useState(false);
   /* the first-visit intro: playing, then a moment where the labels switch on, then gone */
   const [intro, setIntro] = useState<'off' | 'playing' | 'lit'>('off');
   const visitor = useVisitor();
@@ -560,13 +585,30 @@ const DitherPiano: React.FC = () => {
   const bookLineRef = useRef<SVGLineElement>(null);
   const bookDotRef = useRef<SVGRectElement>(null);
   const [dragging, setDragging] = useState(false);
-  const movedRef = useRef(false);
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<number | null>(null);
   const suppressClick = useRef(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const trackRef = useRef<SongTrack | null>(null);
+  const audios = useRef(new Map<string, HTMLAudioElement>());
+  const tracks = useRef(new Map<string, SongTrack>());
+  const [songId, setSongId] = useState(SONGS[0].id);
+  const songIdRef = useRef(songId);
+  const playToken = useRef(0); // bumped on every play/pause/switch, so a slow start can't land on the wrong song
+  /* the setlist: unlocked a few seconds into the first play of blue (remembered per browser); "fresh" while the
+     note pointing at it is still up, until it's first opened */
+  const [unlocked, setUnlocked] = useState(() => {
+    try {
+      return !!window.localStorage.getItem(SETLIST_KEY);
+    } catch {
+      return false;
+    }
+  });
+  const [fresh, setFresh] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const listOpenRef = useRef(listOpen);
+  listOpenRef.current = listOpen;
+  const unlockTimer = useRef<number | null>(null);
+  const deckRef = useRef<HTMLDivElement>(null);
   const narrowRef = useRef(narrow);
   narrowRef.current = narrow;
 
@@ -577,11 +619,6 @@ const DitherPiano: React.FC = () => {
       points.current = pts;
       const n = narrowRef.current;
       const snap = (v: number) => Math.round(v / (n ? 2 : 3)) * (n ? 2 : 3);
-      const isMoved = info.moved > 0.02;
-      if (isMoved !== movedRef.current) {
-        movedRef.current = isMoved;
-        setMoved(isMoved);
-      }
       /* 1. place each label: hand-placed offsets for the default view; once the piano is
          turned or zoomed, push labels straight out from its centre so they stay clear */
       const placed = PART_IDS.map((id) => {
@@ -747,46 +784,141 @@ const DitherPiano: React.FC = () => {
     };
   }, []);
 
-  /* the one sound on the site: a recording of "blue", with the piano playing along from its transcription */
-  /* pause keeps the place; play carries on from it. at the end it rewinds for next time */
+  /* the one sound on the site: a recording from the setlist, with the piano playing along from its transcription.
+     pause keeps the place; play carries on from it. at the end it rewinds for next time, and nothing plays on after */
   const pauseSong = useCallback(() => {
-    audioRef.current?.pause();
+    playToken.current += 1;
+    audios.current.get(songIdRef.current)?.pause();
     sceneRef.current?.setSong(null);
     setPlaying(false);
   }, []);
 
-  const endSong = useCallback(() => {
-    const a = audioRef.current;
+  const endSong = useCallback((id: string) => {
+    const a = audios.current.get(id);
     if (a) a.currentTime = 0;
+    if (id !== songIdRef.current) return;
     sceneRef.current?.setSong(null);
     setPlaying(false);
   }, []);
 
-  const playSong = () => {
-    let a = audioRef.current;
+  const startSong = (song: Song) => {
+    const token = ++playToken.current;
+    let a = audios.current.get(song.id);
     if (!a) {
-      a = new Audio(SONG.audio);
+      a = new Audio(songUrl(song.id, 'mp3'));
       a.preload = 'auto';
-      a.addEventListener('ended', endSong);
-      audioRef.current = a;
+      a.addEventListener('ended', () => endSong(song.id));
+      audios.current.set(song.id, a);
     }
     const audio = a;
     setPlaying(true);
     setPlayed(true);
-    const track = trackRef.current
-      ? Promise.resolve(trackRef.current)
-      : fetch(SONG.track)
+    if (!unlocked && unlockTimer.current === null) {
+      unlockTimer.current = window.setTimeout(() => {
+        setUnlocked(true);
+        setFresh(true);
+        try {
+          window.localStorage.setItem(SETLIST_KEY, '1');
+        } catch {
+          /* fine: blue unlocks it again next time */
+        }
+      }, SETLIST_DELAY);
+    }
+    const cached = tracks.current.get(song.id);
+    const track = cached
+      ? Promise.resolve(cached)
+      : fetch(songUrl(song.id, 'json'))
           .then((r) => r.json() as Promise<SongTrack>)
-          .then((t) => (trackRef.current = t));
+          .then((t) => {
+            tracks.current.set(song.id, t);
+            return t;
+          });
     Promise.all([audio.play(), track])
       .then(([, t]) => {
-        if (audio.paused) return; // paused again before it got going
+        if (token !== playToken.current || audio.paused) return; // paused or switched before it got going
         sceneRef.current?.setSong({ track: t, time: () => audio.currentTime });
       })
-      .catch(pauseSong);
+      .catch(() => {
+        if (token === playToken.current) pauseSong();
+      });
   };
 
-  useEffect(() => () => audioRef.current?.pause(), []);
+  const playSong = () => startSong(songById(songIdRef.current));
+
+  /* picking from the setlist: the old song stops and rewinds, the button takes the new one's name and it starts */
+  const chooseSong = (id: string) => {
+    setListOpen(false);
+    if (id !== songIdRef.current) {
+      const prev = audios.current.get(songIdRef.current);
+      if (prev) {
+        prev.pause();
+        prev.currentTime = 0;
+      }
+      sceneRef.current?.setSong(null);
+      songIdRef.current = id;
+      setSongId(id);
+    }
+    startSong(songById(id));
+  };
+
+  const toggleList = () => {
+    setFresh(false);
+    setListOpen((o) => !o);
+  };
+
+  const enterConcert = () => {
+    setListOpen(false);
+    hoverPart(null);
+    setConcert(true);
+    setConcertHint(true);
+    sceneRef.current?.setConcert(true);
+  };
+
+  const leaveConcert = useCallback(() => {
+    setConcert(false);
+    sceneRef.current?.setConcert(false);
+  }, []);
+
+  /* how to get out is said once, briefly, then the screen is just the piano */
+  useEffect(() => {
+    if (!concertHint) return undefined;
+    const t = window.setTimeout(() => setConcertHint(false), 3200);
+    return () => window.clearTimeout(t);
+  }, [concertHint]);
+
+  /* any key leaves (the veil over the screen takes care of clicks, taps, drags and scrolls), and so does the music
+     stopping, after a beat */
+  useEffect(() => {
+    if (!concert) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      leaveConcert();
+    };
+    window.addEventListener('keydown', onKey);
+    const t = playing ? 0 : window.setTimeout(leaveConcert, 1400);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.clearTimeout(t);
+    };
+  }, [concert, playing, leaveConcert]);
+
+  /* the setlist folds away on a click anywhere else */
+  useEffect(() => {
+    if (!listOpen) return undefined;
+    const away = (e: PointerEvent) => {
+      if (!deckRef.current?.contains(e.target as Node)) setListOpen(false);
+    };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [listOpen]);
+
+  useEffect(() => {
+    const all = audios.current;
+    return () => {
+      all.forEach((a) => a.pause());
+      if (unlockTimer.current !== null) window.clearTimeout(unlockTimer.current);
+    };
+  }, []);
 
   /* the darkroom: into the lens, the aperture shuts, opens on the prints, the shutter fires and they develop.
      Leaving runs it backwards, out onto the bench */
@@ -988,6 +1120,10 @@ const DitherPiano: React.FC = () => {
       else close();
     };
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && listOpenRef.current) {
+        setListOpen(false);
+        return;
+      }
       if (e.key === 'Escape') {
         if (roomRef.current === 'open') requestLeaveRoom();
         else if (bookStateRef.current === 'open') closeBook();
@@ -1142,6 +1278,7 @@ const DitherPiano: React.FC = () => {
     }
   }
   const section = active ? byId[active] : null;
+  const song = songById(songId);
 
   return (
     <BookContext.Provider value={bookCtx}>
@@ -1149,7 +1286,7 @@ const DitherPiano: React.FC = () => {
     <div
       className={`onebit phase-${phase}${narrow ? ' is-narrow' : ''}${hover ? ' has-hover' : ''}${
         intro === 'playing' ? ' is-intro' : intro === 'lit' ? ' is-lit' : ''
-      }`}
+      }${concert ? ' is-concert' : ''}`}
     >
       <canvas
         ref={canvasRef}
@@ -1305,15 +1442,6 @@ const DitherPiano: React.FC = () => {
         </div>
       )}
 
-      <button
-        type="button"
-        className={`reset-view${moved && phase === 'home' ? ' is-shown' : ''}`}
-        onClick={() => sceneRef.current?.resetView()}
-        tabIndex={moved && phase === 'home' ? 0 : -1}
-      >
-        ⟲ reset view
-      </button>
-
       {intro !== 'off' && visitor !== null && (
         <p className="visitor-stamp" aria-hidden="true">
           visitor no. {counterDigits(visitor)}
@@ -1328,24 +1456,86 @@ const DitherPiano: React.FC = () => {
         </svg>
       </div>
 
-      <button
-        type="button"
-        className={`play${playing ? ' is-on' : ''}`}
-        onClick={playing ? pauseSong : playSong}
-        aria-label={playing ? `Pause “${SONG.title}”` : `Play “${SONG.title}” by ${SONG.by} on the piano`}
-      >
-        <svg className="play-icon" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-          {playing ? (
-            <>
-              <rect x="1" y="1" width="3" height="8" />
-              <rect x="6" y="1" width="3" height="8" />
-            </>
-          ) : (
-            <path d="M2 1 L9 5 L2 9 Z" />
-          )}
-        </svg>
-        {SONG.title} · {SONG.by}
-      </button>
+      {concert && (
+        <div
+          className="concert-veil"
+          onPointerDown={leaveConcert}
+          onWheel={leaveConcert}
+          aria-label="Leave concert mode"
+          role="button"
+          tabIndex={-1}
+        >
+          <p className={`concert-hint${concertHint ? ' is-shown' : ''}`}>{narrow ? 'tap' : 'click'} anywhere to leave</p>
+        </div>
+      )}
+
+      {/* bottom right: concert mode (while a song plays), then the setlist's tab, then the song button; the setlist stacks up from them */}
+      <div className="deck" ref={deckRef}>
+        {playing && phase === 'home' && room === 'closed' && (
+          <button type="button" className="concert-on" onClick={enterConcert}>
+            concert mode
+          </button>
+        )}
+
+        {unlocked && (
+          <span className="setlist-anchor">
+            <button
+              type="button"
+              className={`setlist-toggle${fresh ? ' is-fresh' : ''}${listOpen ? ' is-open' : ''}`}
+              onClick={toggleList}
+              aria-expanded={listOpen}
+              aria-controls="setlist"
+              aria-label={listOpen ? 'Close the setlist' : 'Choose another song'}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                <path d={listOpen ? 'M1 3 L9 3 L5 8 Z' : 'M1 7 L9 7 L5 2 Z'} />
+              </svg>
+            </button>
+            <span
+              className={`request-note${fresh && !listOpen && phase === 'home' && intro === 'off' ? ' is-shown' : ''}`}
+              aria-hidden="true"
+            >
+              <span>taking requests</span>
+              <svg width="44" height="40" viewBox="0 0 44 40">
+                <path className="play-note-line" d="M1 8 C 22 6, 34 14, 34 33" />
+                <path d="M29 28 L34 35 L39 28" />
+              </svg>
+            </span>
+          </span>
+        )}
+
+        {unlocked && listOpen && (
+          <ul className="setlist" id="setlist">
+            {SONGS.filter((s) => s.id !== songId).map((s, k) => (
+              <li key={s.id} style={{ '--k': k } as React.CSSProperties}>
+                <button
+                  type="button"
+                  onClick={() => chooseSong(s.id)}
+                  aria-label={`Play “${s.title}” by ${s.by} on the piano`}
+                >
+                  <PlayIcon />
+                  <span className="song-label">
+                    {s.title} · {s.by}
+                  </span>
+                  {s.id === SONGS[0].id && <span className="setlist-fav">curr fav</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          className={`play${playing ? ' is-on' : ''}`}
+          onClick={playing ? pauseSong : playSong}
+          aria-label={playing ? `Pause “${song.title}”` : `Play “${song.title}” by ${song.by} on the piano`}
+        >
+          <PlayIcon paused={playing} />
+          <span className="song-label">
+            {song.title} · {song.by}
+          </span>
+        </button>
+      </div>
 
       <article
         className={`reading${shown ? ' is-shown' : ''}`}
