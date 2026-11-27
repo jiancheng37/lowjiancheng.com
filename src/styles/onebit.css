@@ -226,6 +226,7 @@ body {
 }
 
 .job-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.rows li.job:hover .job-top b { text-decoration: underline; text-underline-offset: 4px; }
 
 .row-note { display: block; margin-top: 6px; font-size: 13px; line-height: 1.55; opacity: 0.75; max-width: 40ch; }
 .ph-block { font-style: italic; opacity: 0.65; }

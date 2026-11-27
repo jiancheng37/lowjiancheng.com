@@ -41,6 +41,8 @@ export type PianoScene = {
   /* hand the piano a transcription and a clock (seconds into the recording); null stops it */
   setSong: (song: { track: SongTrack; time: () => number } | null) => void;
   /* the darkroom: glide into the bench camera's lens, come back out to the bench, and stop drawing while covered */
+  /* a role on the work page is being pointed at: its string shivers (null lets it ring out) */
+  setRole: (index: number | null) => void;
   flyIntoLens: (onDone: () => void) => void;
   leaveLens: () => void;
   setHidden: (hidden: boolean) => void;
@@ -391,8 +393,59 @@ export const createPianoScene = (
   }
   const stringGeo = new THREE.BufferGeometry();
   stringGeo.setAttribute('position', new THREE.Float32BufferAttribute(stringPts, 3));
-  const strings = new THREE.LineSegments(stringGeo, new THREE.LineBasicMaterial({ color: 0xeeeae0 }));
+  const stringMat = new THREE.LineBasicMaterial({ color: 0xeeeae0 });
+  const strings = new THREE.LineSegments(stringGeo, stringMat);
   piano.add(strings);
+
+  /* five of those strings belong to the five roles on the work page, newest first: a touch heavier, and the two
+     still to come drawn dashed, not yet strung. Each is a run of short bars, so it can shiver when its role is pointed at */
+  const ROLE_STRINGS = [
+    { i: 29, dashed: true },
+    { i: 23, dashed: true },
+    { i: 17, dashed: false },
+    { i: 11, dashed: false },
+    { i: 5, dashed: false },
+  ];
+  const BEADS = 48;
+  const roleBars = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    ROLE_STRINGS.length * BEADS,
+  );
+  roleBars.castShadow = false;
+  roleBars.receiveShadow = false;
+  const roles = ROLE_STRINGS.map(({ i, dashed }) => {
+    const u = -0.4 + (i / 33) * 1.04;
+    const ue = u - 0.03;
+    const a = V(u, 0.846, -0.34);
+    const b = V(ue, 0.842, -(vEdge(ue) - 0.1));
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    dir.normalize();
+    return { a, dir, len, dashed, q: new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dir), energy: 0 };
+  });
+  const roleMtx = new THREE.Matrix4();
+  const rolePos = new THREE.Vector3();
+  const roleScale = new THREE.Vector3();
+  const placeRole = (n: number, t: number) => {
+    const r = roles[n];
+    const seg = (r.len / BEADS) * (r.dashed ? 0.5 : 1.04);
+    for (let k = 0; k < BEADS; k += 1) {
+      const sAt = (k + 0.5) / BEADS;
+      /* the fundamental plus a little of the second harmonic, so it reads as a plucked string rather than a wave */
+      const lift =
+        r.energy * 0.026 * (Math.sin(Math.PI * sAt) * Math.sin(t * 44) + 0.35 * Math.sin(2 * Math.PI * sAt) * Math.sin(t * 88 + 0.6));
+      rolePos.copy(r.a).addScaledVector(r.dir, sAt * r.len);
+      rolePos.y += lift;
+      roleMtx.compose(rolePos, r.q, roleScale.set(0.011, 0.005, seg));
+      roleBars.setMatrixAt(n * BEADS + k, roleMtx);
+    }
+  };
+  roles.forEach((_, n) => placeRole(n, 0));
+  piano.add(roleBars);
+  let roleHot: number | null = null;
+  const STRING_LIT = new THREE.Color(0xeeeae0);
+  const STRING_DIM = new THREE.Color(0x67635d);
 
   const damperGeo = new THREE.BoxGeometry(0.016, 0.03, 0.04);
   const dampers = new THREE.InstancedMesh(damperGeo, ebony, 44);
@@ -959,6 +1012,19 @@ export const createPianoScene = (
     }
     if (dampersMoved) dampers.instanceMatrix.needsUpdate = true;
 
+    /* the role strings: the one pointed at shivers and the rest of the bed steps back; let go, and it rings out */
+    let rolesMoved = false;
+    roles.forEach((r, n) => {
+      const want = roleHot === n ? 1 : 0;
+      if (want === 0 && r.energy === 0) return;
+      r.energy += (want - r.energy) * Math.min(1, dt * (want > r.energy ? 14 : 2.4));
+      if (want === 0 && r.energy < 0.004) r.energy = 0;
+      placeRole(n, elapsed);
+      rolesMoved = true;
+    });
+    if (rolesMoved) roleBars.instanceMatrix.needsUpdate = true;
+    stringMat.color.lerp(roleHot === null ? STRING_LIT : STRING_DIM, Math.min(1, dt * 8));
+
     tally.visible = resting === 'off' && !bookMode && !dolly && !hidden && Math.floor(elapsed * 1.6) % 2 === 0;
 
     /* the notebook: the cover swinging on its spine, then any page turns queued up behind it */
@@ -1233,6 +1299,9 @@ export const createPianoScene = (
     setSong(next) {
       song = next;
       lastOnset.clear();
+    },
+    setRole(index) {
+      roleHot = index;
     },
     flyIntoLens(onDone) {
       piano.updateMatrixWorld(true);

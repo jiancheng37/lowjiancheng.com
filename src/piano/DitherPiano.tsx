@@ -41,14 +41,20 @@ const OFFSETS: Record<PartId, [number, number, number, number]> = {
 };
 
 /* a role, with the company's logo as a 1-bit stencil painted in the site's off-white */
-const Job: React.FC<{ logo: string; year: string; name: string; role: string; note?: string }> = ({
+/* each role is one of the piano's strings; pointing at a role makes its string shiver */
+const StringsContext = React.createContext<(index: number | null) => void>(() => undefined);
+
+const Job: React.FC<{ index: number; logo: string; year: string; name: string; role: string; note?: string }> = ({
+  index,
   logo,
   year,
   name,
   role,
   note,
-}) => (
-  <li className="job">
+}) => {
+  const pluck = useContext(StringsContext);
+  return (
+  <li className="job" onPointerEnter={() => pluck(index)} onPointerLeave={() => pluck(null)}>
     <span
       className="logo"
       style={{ '--logo': `url(${process.env.PUBLIC_URL}/logos/${logo})` } as React.CSSProperties}
@@ -63,7 +69,8 @@ const Job: React.FC<{ logo: string; year: string; name: string; role: string; no
       {note && <span className="row-note">{note}</span>}
     </span>
   </li>
-);
+  );
+};
 
 /* speaks 建成 with the device's Mandarin voice; hidden when there isn't one */
 const SayIt: React.FC = () => {
@@ -244,11 +251,11 @@ const PAGES: Record<PartId, { title: string; body: React.ReactNode }> = {
     title: 'work.',
     body: (
       <ul className="rows">
-        <Job logo="stripe.svg" year="2027" name="stripe" role="software engineer · incoming" />
-        <Job logo="autodesk.svg" year="2027" name="autodesk" role="software engineer intern · incoming" />
-        <Job logo="cpf.png" year="2026" name="cpf board" role="ai developer intern" />
-        <Job logo="privyr.png" year="2025" name="privyr" role="software engineer intern" />
-        <Job logo="fintech-lab.png" year="2024" name="nus fintech lab" role="software engineer intern" />
+        <Job index={0} logo="stripe.svg" year="2027" name="stripe" role="software engineer · incoming" />
+        <Job index={1} logo="autodesk.svg" year="2027" name="autodesk" role="software engineer intern · incoming" />
+        <Job index={2} logo="cpf.png" year="2026" name="cpf board" role="ai developer intern" />
+        <Job index={3} logo="privyr.png" year="2025" name="privyr" role="software engineer intern" />
+        <Job index={4} logo="fintech-lab.png" year="2024" name="nus fintech lab" role="software engineer intern" />
       </ul>
     ),
   },
@@ -862,6 +869,8 @@ const DitherPiano: React.FC = () => {
     [goTo, currentEntry, layout],
   );
 
+  const pluckRole = useCallback((index: number | null) => sceneRef.current?.setRole(index), []);
+
   const hoverPart = useCallback((id: PartId | null) => {
     setHover(id);
     sceneRef.current?.setHover(id);
@@ -880,6 +889,7 @@ const DitherPiano: React.FC = () => {
 
   const close = useCallback(() => {
     if (!active) return;
+    sceneRef.current?.setRole(null);
     if (bookStateRef.current !== 'closed') {
       sceneRef.current?.resetBook();
       setPendingEntry(null);
@@ -1071,6 +1081,7 @@ const DitherPiano: React.FC = () => {
 
   return (
     <BookContext.Provider value={bookCtx}>
+    <StringsContext.Provider value={pluckRole}>
     <div className={`onebit phase-${phase}${narrow ? ' is-narrow' : ''}${hover ? ' has-hover' : ''}`}>
       <canvas
         ref={canvasRef}
@@ -1235,7 +1246,7 @@ const DitherPiano: React.FC = () => {
       </button>
 
       <div className={`play-note${phase === 'home' && !played ? ' is-shown' : ''}`} aria-hidden="true">
-        <span>the fastest way to know me: my current favourite.</span>
+        <span>curr fav</span>
         <svg width="44" height="40" viewBox="0 0 44 40">
           <path className="play-note-line" d="M1 8 C 22 6, 34 14, 34 33" />
           <path d="M29 28 L34 35 L39 28" />
@@ -1279,6 +1290,7 @@ const DitherPiano: React.FC = () => {
         )}
       </article>
     </div>
+    </StringsContext.Provider>
     </BookContext.Provider>
   );
 };
