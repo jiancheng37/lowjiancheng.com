@@ -22,33 +22,12 @@ const SECTIONS: Section[] = [
   { id: 'off', label: 'off the keys', fig: 'd', part: 'the bench' },
   { id: 'socials', label: 'socials', fig: 'e', part: 'the metronome' },
 ];
-/* the setlist. blue comes first and is what the button starts on; the rest open up once blue has been played.
-   Each needs public/song/<id>.mp3 and its transcription public/song/<id>.json */
-type Song = { id: string; title: string; by: string };
-const SONGS: Song[] = [
-  { id: 'blue', title: 'blue', by: 'yung kai' },
-  { id: 'so-easy', title: 'so easy (to fall in love)', by: 'olivia dean' },
-  { id: 'here-with-me', title: 'here with me', by: 'd4vd' },
-  { id: 'honeybee', title: 'honeybee', by: 'olivia rodrigo' },
-  { id: 'die-with-a-smile', title: 'die with a smile', by: 'lady gaga & bruno mars' },
-];
-const songUrl = (id: string, ext: 'mp3' | 'json') => `${process.env.PUBLIC_URL}/song/${id}.${ext}`;
-const songById = (id: string) => SONGS.find((s) => s.id === id) ?? SONGS[0];
-const SETLIST_KEY = 'jc-setlist';
-const SETLIST_DELAY = 4000; // how long blue plays before the rest of the setlist turns up
-
-const PlayIcon: React.FC<{ paused?: boolean }> = ({ paused }) => (
-  <svg className="play-icon" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-    {paused ? (
-      <>
-        <rect x="1" y="1" width="3" height="8" />
-        <rect x="6" y="1" width="3" height="8" />
-      </>
-    ) : (
-      <path d="M2 1 L9 5 L2 9 Z" />
-    )}
-  </svg>
-);
+const SONG = {
+  title: 'blue',
+  by: 'yung kai',
+  audio: `${process.env.PUBLIC_URL}/song/blue.mp3`,
+  track: `${process.env.PUBLIC_URL}/song/blue.json`,
+};
 
 const byId = Object.fromEntries(SECTIONS.map((s) => [s.id, s])) as Record<PartId, Section>;
 
