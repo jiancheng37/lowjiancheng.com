@@ -1,0 +1,627 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink: #1b1a1d;
+  --paper: #ece8de;
+  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.onebit {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* ── the song button ── */
+.play {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  padding: 3px 10px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reset-view {
+  position: fixed;
+  right: 188px;
+  bottom: 16px;
+  z-index: 40;
+  padding: 3px 10px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.reset-view.is-shown { opacity: 1; pointer-events: auto; }
+.reset-view:hover,
+.reset-view:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+
+.play:hover,
+.play:focus-visible,
+.play.is-on { background: var(--paper); color: var(--ink); outline: none; }
+.play { display: inline-flex; align-items: center; gap: 7px; }
+.play-icon { flex: none; fill: currentColor; shape-rendering: crispEdges; }
+
+/* a margin note on the overview, pointing at the song button until it's first pressed */
+.play-note {
+  position: fixed;
+  right: 60px;
+  bottom: 50px;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.play-note.is-shown { visibility: visible; animation: switch-on 1ms step-start 1400ms forwards; }
+.play-note span { padding: 0 4px; background: var(--ink); white-space: nowrap; }
+.play-note svg { flex: none; overflow: visible; }
+.play-note path { fill: none; stroke: var(--paper); stroke-width: 2; }
+.play-note .play-note-line { stroke-dasharray: 4 4; }
+
+/* ── labels with leader lines ── */
+.leaders,
+.tags {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.leaders line { stroke: var(--paper); stroke-width: 2; shape-rendering: crispEdges; stroke-dasharray: 4 4; }
+.leaders rect { fill: var(--paper); shape-rendering: crispEdges; }
+.leaders .is-hot line { stroke-dasharray: none; }
+.leaders .is-behind { opacity: 0.3; }
+
+.tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 9px 5px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.tag-fig { font-family: var(--mono); font-size: 10px; opacity: 0.75; }
+.tag-label { font-size: 19px; font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; }
+.tag.is-hot,
+.tag:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.tag { transition: opacity 150ms ease; }
+.tag.is-behind:not(.is-hot, :focus-visible) { opacity: 0.35; }
+
+.phase-flying .leaders,
+.phase-flying .tags,
+.phase-open .leaders,
+.phase-open .tags,
+.phase-closing .leaders,
+.phase-closing .tags { opacity: 0; }
+
+.phase-flying .tag,
+.phase-open .tag,
+.phase-closing .tag { pointer-events: none; }
+
+/* ── reading: the words for the open part, set straight onto the dark ── */
+.reading {
+  position: fixed;
+  top: 50%;
+  right: max(32px, 6vw);
+  z-index: 30;
+  width: min(500px, 40vw);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  transform: translateY(-50%);
+  visibility: hidden;
+  scrollbar-width: none;
+}
+
+.reading::-webkit-scrollbar { display: none; }
+.reading.is-shown { visibility: visible; }
+
+.read-fig {
+  margin: 0 0 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+.read-title {
+  margin: 0 0 22px;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(48px, 6vw, 84px);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.read-body { font-family: var(--mono); font-size: 14px; line-height: 1.7; }
+.read-body p { margin: 0 0 14px; max-width: 46ch; }
+.aside { font-style: italic; opacity: 0.7; }
+.ph { font-style: italic; text-decoration: underline dotted; text-underline-offset: 3px; opacity: 0.65; }
+
+.rows { margin: 4px 0 18px; padding: 0; list-style: none; border-top: 2px solid var(--paper); }
+
+.rows li {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 2px dotted rgb(236 232 222 / 45%);
+}
+
+.row-k { font-size: 13px; opacity: 0.75; padding-top: 3px; }
+.row-v { min-width: 0; }
+.row-v b { display: block; font-family: var(--sans); font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -0.02em; }
+.row-v i { display: block; opacity: 0.85; }
+
+
+.rows li.job { grid-template-columns: 64px 1fr; align-items: start; }
+
+.logo {
+  display: block;
+  width: 52px;
+  height: 34px;
+  margin-top: 2px;
+  background: var(--paper);
+  mask-image: var(--logo);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: left center;
+}
+
+.job-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+
+.row-note { display: block; margin-top: 6px; font-size: 13px; line-height: 1.55; opacity: 0.75; max-width: 40ch; }
+.ph-block { font-style: italic; opacity: 0.65; }
+
+/* the name: two dictionary entries */
+.glyphs { margin: 6px 0 18px; padding: 0; list-style: none; border-top: 2px solid var(--paper); }
+
+.glyphs li {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 0;
+  border-bottom: 2px dotted rgb(236 232 222 / 45%);
+}
+
+.glyph { font-size: 64px; line-height: 1; font-weight: 500; }
+.glyph-def { min-width: 0; }
+.glyph-def b { font-family: var(--sans); font-weight: 500; font-size: 22px; letter-spacing: -0.02em; margin-right: 10px; }
+.glyph-def i { font-size: 12px; opacity: 0.6; }
+.glyph-def span { display: block; margin-top: 4px; font-size: 13px; line-height: 1.6; opacity: 0.85; }
+
+.say { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.say i { opacity: 0.6; }
+
+.say-it {
+  padding: 3px 10px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.say-it:hover,
+.say-it:focus-visible,
+.say-it.is-speaking { background: var(--paper); color: var(--ink); outline: none; }
+
+/* folds: entries that open in place (thoughts, off the keys) */
+.folds { margin: 4px 0 0; padding: 0; list-style: none; border-top: 2px solid var(--paper); }
+.folds li { border-bottom: 2px dotted rgb(236 232 222 / 45%); }
+
+.folds button {
+  display: grid;
+  grid-template-columns: 88px 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  font-family: var(--mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.folds button b { font-family: var(--sans); font-weight: 500; font-size: 20px; letter-spacing: -0.02em; }
+.folds button:hover b,
+.folds button:focus-visible b { text-decoration: underline; text-underline-offset: 4px; }
+.folds button:focus-visible { outline: 1px dashed var(--paper); outline-offset: 2px; }
+.fold-mark { font-size: 16px; padding-right: 4px; }
+
+.fold-body {
+  padding: 0 0 14px 100px;
+  font-size: 14px;
+  line-height: 1.7;
+  clip-path: inset(0 100% 0 0);
+  animation: wipe-in 200ms steps(6) forwards;
+}
+
+.fold-body p { margin: 0 0 10px; max-width: 46ch; }
+
+.read-photo {
+  float: right;
+  width: 140px;
+  margin: 0 0 12px 20px;
+  padding: 5px 5px 4px;
+  border: 2px solid var(--paper);
+}
+
+.read-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.35);
+  image-rendering: pixelated;
+}
+
+.read-photo figcaption { margin-top: 4px; font-family: var(--mono); font-size: 11px; line-height: 1.4; }
+
+.read-links { margin: 14px 0 0; padding: 0; list-style: none; }
+
+.read-links a {
+  display: inline-block;
+  margin: 3px 0;
+  padding: 0 6px;
+  color: var(--paper);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.read-links a:hover,
+.read-links a:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.read-email { margin-top: 10px; user-select: all; }
+
+/* the reveal: the fig. line appears, the title's letters switch on in a scattered order,
+   then each line of the body wipes in from the left in hard steps */
+.read-fig,
+.read-title span { opacity: 0; }
+
+.read-body > p,
+.read-body > figure,
+.read-body > ul > li { clip-path: inset(0 100% 0 0); }
+
+.is-shown .read-fig { animation: switch-on 1ms step-start 40ms forwards; }
+.is-shown .read-title span { animation: switch-on 1ms step-start forwards; animation-delay: calc(120ms + var(--d, 0ms)); }
+
+.is-shown .read-body > p,
+.is-shown .read-body > figure,
+.is-shown .read-body > ul > li {
+  animation: wipe-in 240ms steps(8) forwards;
+  animation-delay: calc(420ms + var(--i, 0) * 70ms);
+}
+
+@keyframes switch-on { to { opacity: 1; } }
+@keyframes wipe-in { to { clip-path: inset(0 0 0 0); } }
+
+/* ── the bench camera: its own label on the close-up, and the way into the darkroom ── */
+.cam-callout { position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0; visibility: hidden; }
+.cam-callout.is-on { visibility: visible; animation: switch-on 1ms step-start 1100ms forwards; }
+.cam-leader { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cam-leader line { stroke: var(--paper); stroke-width: 2; shape-rendering: crispEdges; stroke-dasharray: 4 4; }
+.cam-leader rect { fill: var(--paper); shape-rendering: crispEdges; }
+.phase-open .cam-callout .cam-tag { pointer-events: auto; }
+
+/* the aperture: shuts as the camera reaches the lens, opens on the darkroom */
+.iris { position: fixed; inset: 0; z-index: 38; pointer-events: none; }
+.iris svg { display: block; width: 100%; height: 100%; }
+.iris-blades { fill: url(#iris-grain); }
+.iris-edges line { stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.iris-move { transform: scale(75); transform-box: view-box; transform-origin: 50px 50px; }
+.iris.is-entering .iris-move { animation: iris-shut 520ms steps(9) 620ms both; }
+.iris.is-open .iris-move { animation: iris-wide 640ms steps(10) 140ms both; }
+.iris.is-leaving .iris-move { animation: iris-shut 420ms steps(8) both; }
+.iris.is-returning .iris-move { animation: iris-wide 560ms steps(9) 60ms both; }
+.flash { position: absolute; inset: 0; background: var(--paper); opacity: 0; }
+.iris.is-open .flash { animation: flash 280ms steps(3) 800ms; }
+
+@keyframes iris-shut {
+  from { transform: scale(75) rotate(0deg); }
+  to { transform: scale(0.01) rotate(70deg); }
+}
+
+@keyframes iris-wide {
+  from { transform: scale(0.01) rotate(70deg); }
+  to { transform: scale(75) rotate(0deg); }
+}
+
+@keyframes flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* the darkroom: prints pegged to a line */
+.darkroom {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  padding: max(28px, 5vh) max(32px, 6vw) 72px;
+  overflow-y: auto;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.darkroom .read-title { margin-bottom: 0; }
+
+.darkroom-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 36;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.darkroom-close:hover,
+.darkroom-close:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+
+/* one long line across the room; it scrolls sideways, freely, and the prints hang along it */
+.prints-window {
+  margin: auto calc(-1 * max(32px, 6vw));
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.prints-window::-webkit-scrollbar { display: none; }
+
+.prints {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(24px, 4vw, 64px);
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 34px max(32px, 6vw) 14px;
+  list-style: none;
+}
+
+.prints::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 0;
+  left: 0;
+  border-top: 2px solid var(--paper);
+}
+
+/* the prints still read in threes: a wider stretch of bare line after every third */
+.prints .print:nth-child(3n + 4) { margin-left: clamp(48px, 9vw, 150px); }
+
+.print {
+  position: relative;
+  width: min(26vw, 300px, calc((100vh - 300px) / 1.5));
+  transform: rotate(var(--tilt));
+  transform-origin: 50% -24px;
+}
+
+.is-shown .print.is-seen { animation: sway 1100ms steps(7) both; animation-delay: calc(var(--n) * 260ms); }
+
+@keyframes sway {
+  from { transform: rotate(calc(var(--tilt) + 4deg)); }
+  60% { transform: rotate(calc(var(--tilt) - 1.5deg)); }
+  to { transform: rotate(var(--tilt)); }
+}
+
+.peg {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  z-index: 1;
+  width: 10px;
+  height: 22px;
+  margin-left: -5px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.print-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 6px;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  cursor: zoom-in;
+}
+
+.print-frame:focus-visible { outline: 1px dashed var(--paper); outline-offset: 3px; }
+.print.is-full .print-frame { cursor: zoom-out; }
+.print-dots { display: block; width: 100%; aspect-ratio: 2 / 3; image-rendering: pixelated; }
+
+.print-full {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.15);
+  opacity: 0;
+  transition: opacity 240ms steps(4);
+}
+
+.print.is-full .print-full { opacity: 1; }
+
+@media (hover: hover) {
+  .print:hover .print-full { opacity: 1; }
+}
+
+.print-cap { display: block; margin-top: 8px; font-family: var(--mono); font-size: 11px; opacity: 0; }
+.is-shown .print.is-seen .print-cap { animation: switch-on 1ms step-start forwards; animation-delay: calc(1900ms + var(--n) * 260ms); }
+
+/* ── the notebook on the bench: real text laid over the 3D pages, dark on paper ── */
+.nb-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  transform-origin: 0 0;
+  visibility: hidden;
+  touch-action: pan-y;
+}
+
+.nb-page.is-shown { visibility: visible; }
+.nb-measure { left: -10000px; }
+.nb-inner { display: flex; flex-direction: column; height: 100%; padding: 7% 8% 4%; }
+.nb-head { display: flex; justify-content: space-between; margin-bottom: 14px; font-family: var(--mono); font-size: 10px; line-height: 1; opacity: 0.6; }
+.nb-text { flex: 1; min-height: 0; overflow: hidden; font-family: var(--mono); font-size: 12px; line-height: 1.6; }
+.nb-text p { margin: 0 0 0.8em; }
+.nb-text p:last-child { margin-bottom: 0; }
+.nb-foot { display: flex; justify-content: space-between; align-items: center; height: 22px; margin-top: 8px; font-family: var(--mono); font-size: 11px; }
+.nb-num { opacity: 0.6; }
+
+.nb-turn {
+  padding: 1px 7px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.nb-turn:hover,
+.nb-turn:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+.nb-opening { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.nb-label { margin: 0 0 4px; font-family: var(--mono); font-size: 11px; opacity: 0.7; }
+.nb-title { margin: 0 0 12px; font-family: var(--sans); font-size: 21px; font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; }
+.nb-photo { display: flex; flex: 1; flex-direction: column; min-height: 0; margin: 0; }
+.nb-photo canvas { flex: 1; width: 100%; min-height: 0; image-rendering: pixelated; }
+.nb-photo figcaption { margin-top: 6px; font-family: var(--mono); font-size: 10px; opacity: 0.7; }
+
+/* the sheet being turned rides above the pages, and can't be clicked mid-air */
+.nb-page.is-leaf { z-index: 21; visibility: hidden; pointer-events: none; }
+
+/* the list beside it is the contents page */
+.toc .fold-mark { font-family: var(--mono); font-size: 11px; opacity: 0.7; }
+.toc li.is-open b { text-decoration: underline; text-underline-offset: 4px; }
+.toc li.is-open .fold-mark { opacity: 1; }
+
+/* ── narrow screens ── */
+.is-narrow .tag-fig { display: none; }
+.is-narrow .tag-label { font-size: 15px; }
+.is-narrow .tag { padding: 2px 6px 3px; }
+.is-narrow .play { right: 12px; bottom: 12px; font-size: 12px; }
+.is-narrow .play-note { right: 52px; bottom: 44px; font-size: 11px; }
+.is-narrow .play-note span { max-width: 160px; white-space: normal; text-align: right; }
+.is-narrow .darkroom { padding: 60px 20px 80px; }
+.is-narrow .prints-window { margin: 24px 0 0; overflow: visible; }
+.is-narrow .prints { flex-direction: column; align-items: center; gap: 40px; width: auto; padding: 0; }
+.is-narrow .prints .print:nth-child(3n + 4) { margin-top: 56px; margin-left: 0; }
+.is-narrow .prints::before,
+.is-narrow .peg { display: none; }
+.is-narrow .print { width: min(76vw, 340px); transform: none; }
+.is-narrow .is-shown .print.is-seen { animation: none; }
+.is-narrow .reset-view { right: auto; left: 12px; bottom: 12px; }
+.is-narrow.phase-open .play:not(.is-on) { display: none; }
+
+.is-narrow .reading {
+  top: 50vh;
+  right: 20px;
+  bottom: 16px;
+  left: 20px;
+  width: auto;
+  max-height: none;
+  transform: none;
+}
+
+.is-narrow .read-title { font-size: 46px; margin-bottom: 16px; }
+.is-narrow .read-photo { width: 104px; }
+.is-narrow .read-links a { font-size: 26px; }
+.is-narrow .fold-body { padding-left: 0; }
+.is-narrow .glyph { font-size: 52px; }
+.is-narrow .glyphs li { grid-template-columns: 64px 1fr; }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-shown .read-fig,
+  .is-shown .read-title span { animation: none; opacity: 1; }
+
+  .is-shown .read-body > p,
+  .is-shown .read-body > figure,
+  .is-shown .read-body > ul > li { animation: none; clip-path: none; }
+  .fold-body { animation: none; clip-path: none; }
+  .iris { display: none; }
+
+  .is-shown .print.is-seen { animation: none; }
+  .is-shown .print.is-seen .print-cap { animation: none; opacity: 1; }
+}
