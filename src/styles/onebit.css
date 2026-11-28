@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Mrs+Saint+Delafield&display=swap');
 
 :root {
   --ink: #1b1a1d;
@@ -695,16 +695,30 @@ body {
 .toc li.is-open b { text-decoration: underline; text-underline-offset: 4px; }
 .toc li.is-open .fold-mark { opacity: 1; }
 
-/* ── the first-visit intro: the stage is dark, so everything waits; when the light is up the labels switch on in turn ── */
+/* ── the first-visit intro: sand on a plate covers the piano and settles into it, so everything waits; then the labels
+   switch on in turn ── */
+.sand {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--ink);
+  image-rendering: pixelated;
+  touch-action: none;
+}
 .is-intro .leaders,
 .is-intro .tags,
 .is-intro .play,
 .is-intro .play-note,
-.is-intro .setlist-anchor { opacity: 0; pointer-events: none; }
+.is-intro .setlist-anchor,
+.is-intro .mute { opacity: 0; pointer-events: none; }
 .is-lit .tag { animation: label-on 160ms linear both; animation-delay: calc(var(--k, 0) * 110ms); }
 .is-lit .leaders { animation: label-on 160ms linear both; }
 .is-lit .play,
-.is-lit .setlist-anchor { animation: label-on 160ms linear 760ms both; }
+.is-lit .setlist-anchor,
+.is-lit .mute { animation: label-on 160ms linear 760ms both; }
 
 @keyframes label-on {
   0%,
@@ -796,3 +810,94 @@ body {
   .setlist-toggle.is-fresh { animation: none; }
   .setlist li { animation: none; opacity: 1; }
 }
+
+/* paper grain: a fixed speckle over the near-black, so it reads as printed stock rather than a flat fill. Sparse
+   light flecks only (thresholded noise), so the paper-coloured type and the dithered scene stay crisp */
+.onebit::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .91 0 0 0 0 .87 0 0 0 9 -5.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  opacity: 0.09;
+}
+
+/* worn ink on the type (filter lives in public/index.html) */
+.tags, .reading, .deck, .visitor-stamp { filter: url(#ink); }
+
+/* ── house lights: the lamp's cord turns the whole page over to a plain, full-colour site. The two colours are
+   registered so they can fade between rather than snap ── */
+@property --ink { syntax: '<color>'; inherits: true; initial-value: #1b1a1d; }
+@property --paper { syntax: '<color>'; inherits: true; initial-value: #ece8de; }
+
+.onebit { color: var(--paper); transition: --ink 900ms ease, --paper 900ms ease; }
+.onebit::after { transition: opacity 900ms ease; }
+.is-turning * {
+  transition: background-color 900ms ease, border-color 900ms ease, border-radius 900ms ease, box-shadow 900ms ease,
+    color 900ms ease, opacity 900ms ease !important;
+}
+
+.onebit.is-colour {
+  --ink: #faf8f4;
+  --paper: #1f1d1b;
+  --card: rgb(250 248 244 / 84%);
+  --line: rgb(31 29 27 / 14%);
+}
+.onebit.is-colour::after { opacity: 0; }
+.is-colour :is(.tags, .reading, .deck, .visitor-stamp) { filter: none; }
+
+/* cards instead of 1-bit boxes: thin borders, rounded corners, a soft shadow, frosted over the room */
+.is-colour :is(.tag, .play, .setlist-toggle, .concert-on, .setlist button, .say-it, .visitor-stamp) {
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 6px 20px rgb(40 30 20 / 14%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.is-colour :is(.tag.is-hot, .tag:focus-visible, .play.is-on, .say-it:hover, .say-it.is-speaking) {
+  background: var(--paper);
+  color: var(--ink);
+}
+.is-colour .leaders line { stroke-width: 1.25; stroke-dasharray: none; shape-rendering: auto; opacity: 0.45; }
+.is-colour .leaders rect { rx: 3px; }
+
+.is-colour .reading {
+  padding: 30px 32px 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 18px 50px rgb(40 30 20 / 18%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.is-colour .read-body { font-family: var(--sans); font-size: 15px; }
+.is-colour :is(.rows, .glyphs, .folds) { border-top: 1px solid var(--line); }
+.is-colour :is(.rows li, .glyphs li, .folds li) { border-bottom: 1px solid var(--line); }
+.is-colour .glyph { border-radius: 8px; }
+
+/* ── sound on / off, at the end of the deck ── */
+.mute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  margin-left: -2px;
+  padding: 0;
+  border: 2px solid var(--paper);
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+.mute svg { fill: currentColor; shape-rendering: crispEdges; }
+.mute :is(.mute-x, .mute-wave) { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.mute:hover,
+.mute:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
+.mute.is-muted svg { opacity: 0.6; }
+.is-colour .mute { margin-left: 6px; border-width: 1px; border-color: var(--line); border-radius: 10px; background: var(--card); box-shadow: 0 6px 20px rgb(40 30 20 / 14%); }
+.is-colour .mute:hover { background: var(--paper); color: var(--ink); }
+.is-concert .mute { opacity: 0; pointer-events: none; }

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { createNameDots, GlyphKey } from './nameDots';
+import { createColourWorld } from './colourRoom';
+import { createNameDots, GlyphKey, SIGNATURE } from './nameDots';
+import type { IntroDots } from './sand';
 
 /* ──────────────────────────────────────────────────────────────────────────
    A grand piano under one stage light, rendered at low resolution and then
@@ -25,7 +27,7 @@ export type FrameInfo = {
   leaf: LeafQuads | null;
   flicks: number;
 };
-export type Pick = { part: PartId | null; midi: number | null; camera: boolean; book: boolean };
+export type Pick = { part: PartId | null; midi: number | null; camera: boolean; book: boolean; lamp: boolean };
 
 /* a transcribed performance: notes as [onset s, offset s, midi, velocity], sustain pedal as [down s, up s],
    and the beat, as the times the metronome should land on */
@@ -46,15 +48,18 @@ export type PianoScene = {
   /* the lettering on the lid: write a character in place of the name, or bring the name back */
   nameGlyph: (key: GlyphKey | null) => void;
   /* the darkroom: glide into the bench camera's lens, come back out to the bench, and stop drawing while covered */
-  /* the first visit: a dark stage with the name glowing on the closed lid; the light warms up, the camera comes
-     down and the lid swings open. Skip jumps straight to the end */
-  playIntro: (onDone: () => void) => void;
-  skipIntro: () => void;
+  /* the first visit: hold still on the overview and hand over its first frame as dots (null if it can't), for the
+     sand to settle into (sand.ts). endIntro lets the piano move again */
+  playIntro: (onDots: (dots: IntroDots | null) => void) => void;
+  endIntro: () => void;
   /* a role on the work page is being pointed at: its string shivers (null lets it ring out) */
   setRole: (index: number | null) => void;
   flyIntoLens: (onDone: () => void) => void;
   leaveLens: () => void;
   setHidden: (hidden: boolean) => void;
+  /* the house lamp's cord: flicker, then the room in colour spreads out from the lamp (or shrinks back into it).
+     onTurn fires when the page around the piano should turn over too */
+  pullLamp: (onTurn: (colour: boolean) => void) => void;
   /* the notebook on the bench: lean in and open it, turn its pages, close it again */
   openBook: (onOpen: () => void) => void;
   closeBook: (onClosed?: () => void) => void;
@@ -137,6 +142,14 @@ const vEdge = (u: number) => {
     if (u >= a.x && u <= b.x) return a.y + ((b.y - a.y) * (u - a.x)) / (b.x - a.x || 1);
   }
   return u < BENT[0].x ? BENT[0].y : BENT[BENT.length - 1].y;
+};
+
+/* the same with its edges rounded over, for the room in colour */
+const extrudeSoft = (shape: THREE.Shape, depth: number, r: number) => {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: depth - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r * 0.7, bevelOffset: -r * 0.7, bevelSegments: 4, curveSegments: 16 });
+  g.translate(0, 0, r);
+  g.rotateX(-Math.PI / 2);
+  return g;
 };
 
 const extrude = (shape: THREE.Shape, depth: number) => {
@@ -252,26 +265,58 @@ uniform float focusStrength;
 uniform float aspect;
 uniform float quiet;
 uniform float quietAxis;
+uniform float flick;
+uniform sampler2D tColour;
+uniform float wave;
+uniform vec2 origin;
+uniform vec2 lowRes;
+uniform vec2 outRes;
+uniform float grainSeed;
+uniform float colourExposure;
 varying vec2 vUv;
+vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
 void main() {
-  vec3 c = texture2D(tScene, vUv).rgb;
+  // one dot per cell of the low-res stage, however many screen pixels the canvas has right now
+  vec2 cell = floor(gl_FragCoord.xy * lowRes / outRes);
+  vec2 uv = (cell + 0.5) / lowRes;
+  vec3 c = texture2D(tScene, uv).rgb;
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   l = pow(max(l, 0.0), 1.0 / 2.2);
   // let the frame fall away to black at its edges
-  vec2 q = (vUv - 0.5) * 2.0;
+  vec2 q = (uv - 0.5) * 2.0;
   float vignette = 1.0 - smoothstep(0.62, 1.3, length(q * vec2(1.0, 0.92)));
   // keep full detail around whatever matters right now, quieter elsewhere
-  vec2 d = (vUv - focus) * vec2(aspect, 1.0);
+  vec2 d = (uv - focus) * vec2(aspect, 1.0);
   float inFocus = 1.0 - smoothstep(focusRadius, focusRadius * 2.4, length(d));
   // and keep the reading side calm while a panel is open
-  float panelSide = quietAxis < 0.5 ? smoothstep(0.47, 0.57, vUv.x) : smoothstep(0.56, 0.48, vUv.y);
+  float panelSide = quietAxis < 0.5 ? smoothstep(0.47, 0.57, uv.x) : smoothstep(0.56, 0.48, uv.y);
   l *= vignette * mix(1.0 - focusStrength, 1.0, inFocus) * (1.0 - quiet * panelSide);
-  l = smoothstep(0.13, 0.9, l) * exposure;
-  float t = bayer8(gl_FragCoord.xy) + 0.5 / 64.0;
-  gl_FragColor = vec4(l > t ? light : dark, 1.0);
+  l = smoothstep(0.13, 0.9, l) * exposure * flick;
+  float t = bayer8(cell) + 0.5 / 64.0;
+  // the house lights: a front of colour spreads from the lamp, light spilling just ahead of it, and its edge
+  // eats the dither a dot at a time
+  float r = length((uv - origin) * vec2(aspect, 1.0));
+  float R = wave * (aspect + 1.4);
+  float ahead = r - R;
+  if (wave > 0.0 && wave < 1.0 && ahead > 0.0) l += 0.7 * (1.0 - smoothstep(0.0, 0.3, ahead));
+  vec3 stage = l > t ? light : dark;
+  float inside = clamp((R - r) / 0.18, 0.0, 1.0);
+  if (inside > t) {
+    // filmic: highlights roll off instead of clipping, the way a photograph of a lit room would
+    vec3 col = aces(max(texture2D(tColour, vUv).rgb, 0.0) * colourExposure);
+    col = pow(col, vec3(1.0 / 2.2));
+    float vig = 1.0 - smoothstep(0.55, 1.45, length((vUv - 0.5) * 2.0 * vec2(1.0, 0.9)));
+    col *= mix(0.78, 1.0, vig);
+    // and a whisper of film grain, moving
+    col += (hash(gl_FragCoord.xy + grainSeed) - 0.5) * 0.028;
+    gl_FragColor = vec4(col, 1.0);
+  } else {
+    gl_FragColor = vec4(stage, 1.0);
+  }
 }
 `;
 
@@ -309,10 +354,21 @@ export const createPianoScene = (
       aspect: { value: 1 },
       quiet: { value: 0 },
       quietAxis: { value: 0 },
+      flick: { value: 1 },
+      tColour: { value: null },
+      wave: { value: 0 },
+      origin: { value: new THREE.Vector2(0.5, 1) },
+      lowRes: { value: new THREE.Vector2(4, 4) },
+      outRes: { value: new THREE.Vector2(4, 4) },
+      grainSeed: { value: 0 },
+      colourExposure: { value: 1.25 },
     },
     depthTest: false,
     depthWrite: false,
   });
+  /* the room in colour, rendered sharp, for once the house lights are on */
+  const colourTarget = new THREE.WebGLRenderTarget(4, 4, { samples: 4 });
+  ditherMat.uniforms.tColour.value = colourTarget.texture;
   const post = new THREE.Scene();
   post.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ditherMat));
   const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -322,12 +378,14 @@ export const createPianoScene = (
   spot.position.set(1.3, 4.7, 2.1);
   spot.target.position.set(0, 0.5, -0.45);
   spot.castShadow = true;
-  spot.shadow.mapSize.set(1024, 1024);
+  spot.shadow.mapSize.set(2048, 2048);
   spot.shadow.bias = -0.0004;
   spot.shadow.normalBias = 0.02;
   scene.add(spot, spot.target);
   const hemi = new THREE.HemisphereLight(0xffffff, 0x1a1a1a, 0.1);
   scene.add(hemi);
+  const house = new THREE.AmbientLight(0xfff1de, 0); // only on in colour
+  scene.add(house);
   const rim = new THREE.DirectionalLight(0xffffff, 1.4);
   rim.position.set(-2.6, 2.4, -3.4);
   scene.add(rim);
@@ -369,6 +427,7 @@ export const createPianoScene = (
       material = owned.get(key)!;
     }
     const m = new THREE.Mesh(geo, material);
+    m.userData.baseMat = mat;
     m.castShadow = opts.shadow !== false;
     m.receiveShadow = true;
     if (opts.edges) {
@@ -390,6 +449,7 @@ export const createPianoScene = (
   shell.holes.push(new THREE.Path(inset(0.035)));
   const caseMesh = mesh(extrude(shell, 0.3), lacquer, { edges: 'light', threshold: 40 });
   caseMesh.position.y = 0.645;
+  caseMesh.userData.colourGeo = extrudeSoft(shell, 0.3, 0.008);
   piano.add(caseMesh);
   const caseFloor = mesh(extrude(outline(), 0.02), lacquer);
   caseFloor.position.y = 0.625;
@@ -449,6 +509,7 @@ export const createPianoScene = (
     ROLE_STRINGS.length * BEADS,
   );
   roleBars.castShadow = false;
+  roleBars.userData.colourGeo = roleBars.geometry;
   roleBars.receiveShadow = false;
   const roles = ROLE_STRINGS.map(({ i, dashed }) => {
     const u = -0.4 + (i / 33) * 1.04;
@@ -555,9 +616,10 @@ export const createPianoScene = (
   WHITE_KEYS.forEach((k, i) => whiteKeys.setMatrixAt(i, mtx.makeTranslation(keyBase(false, k.x))));
   BLACK_KEYS.forEach((k, i) => blackKeys.setMatrixAt(i, mtx.makeTranslation(keyBase(true, k.x))));
 
-  /* each white key carries its own colour, so a sounding one can flip from ivory to dark (black keys only dip) */
+  /* each white key carries its own colour, so a sounding one can sink from ivory into a dark grey: most of its dots go
+     dark but not all, so it reads as a key pressed into shadow rather than a gap in the keyboard (black keys only dip) */
   const IVORY = new THREE.Color(0xf1eee6);
-  const FLIPPED_WHITE = new THREE.Color(0x131215);
+  const PRESSED_WHITE = new THREE.Color(0x45433f);
   (whiteKeys.material as THREE.MeshPhongMaterial).color.set(0xffffff);
   WHITE_KEYS.forEach((_, i) => whiteKeys.setColorAt(i, IVORY));
 
@@ -613,6 +675,11 @@ export const createPianoScene = (
   lidGeo.translate(0.75, 0, 0);
   const lidMat = new THREE.MeshPhongMaterial({ color: 0x3c3c40, specular: 0xbbbbbb, shininess: 60 });
   const lidPanel = mesh(lidGeo, lidMat, { part: 'name', edges: 'light', threshold: 40 });
+  {
+    const soft = extrudeSoft(outline(0.42), 0.022, 0.005);
+    soft.translate(0.75, 0, 0);
+    lidPanel.userData.colourGeo = soft;
+  }
   lidPanel.castShadow = false;
   lid.add(lidPanel);
   /* the owner's name, lettered on the lid like a maker's mark (underside and top) */
@@ -627,7 +694,7 @@ export const createPianoScene = (
   const nameDots = createNameDots(nameCanvas, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   nameTex.needsUpdate = true;
   document.fonts
-    ?.load('500 176px Geist')
+    ?.load(`200px "${SIGNATURE}"`)
     .then(() => nameDots.resample())
     .catch(() => undefined);
   const nameMat = new THREE.MeshBasicMaterial({
@@ -723,6 +790,7 @@ export const createPianoScene = (
   tally.position.set(0.045, 0.053, 0.012);
   tally.visible = false;
   cam.add(camBody, camTop, lens, tally);
+  [camBody, camTop, lens].forEach((m) => (m.userData.stageOnly = true));
   [camBody, camTop, lens, tally].forEach((m) => (m.userData.camera = true));
   tally.userData.part = 'off';
   pickables.push(tally);
@@ -757,15 +825,56 @@ export const createPianoScene = (
   piano.add(bench);
 
   /* floor, rug, loose pages */
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshLambertMaterial({ color: 0x2a2724 }));
+  const floorMat = new THREE.MeshLambertMaterial({ color: 0x2a2724 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
+  floor.userData.stageOnly = true;
   scene.add(floor);
-  const rug = new THREE.Mesh(new THREE.CircleGeometry(2.05, 72), new THREE.MeshLambertMaterial({ color: 0x46423d }));
+  const rugMat = new THREE.MeshLambertMaterial({ color: 0x46423d });
+  const rug = new THREE.Mesh(new THREE.CircleGeometry(2.05, 72), rugMat);
   rug.rotation.x = -Math.PI / 2;
   rug.position.y = 0.002;
   rug.receiveShadow = true;
   scene.add(rug);
+
+  /* the house lamp: hangs over the piano, out of shot until the camera backs right off. Pulling its cord puts
+     the house lights on, and the 1-bit stage gives way to the room in colour */
+  const lamp = new THREE.Group();
+  const lampBody = new THREE.MeshBasicMaterial({ color: 0x8e897f, side: THREE.DoubleSide, fog: false, transparent: true });
+  const lampEdge = new THREE.LineBasicMaterial({ color: 0xf0ede6, fog: false, transparent: true });
+  const lampBright = new THREE.MeshBasicMaterial({ color: 0xf0ede6, fog: false, transparent: true });
+  /* drawn as a line, so it's always a dot wide however far off the camera is */
+  const lampRod = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0.12, 0), V(0, 4.5, 0)]), lampEdge);
+  const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.18, 0.24, 28, 1, true), lampBody);
+  const lampCap = new THREE.Mesh(new THREE.CircleGeometry(0.06, 20), lampBody);
+  lampCap.rotation.x = -Math.PI / 2;
+  lampCap.position.y = 0.12;
+  const lampRing = (r: number, y: number) =>
+    new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(
+        Array.from({ length: 48 }, (_, i) => V(Math.cos((i / 48) * Math.PI * 2) * r, y, Math.sin((i / 48) * Math.PI * 2) * r)),
+      ),
+      lampEdge,
+    );
+  const lampBulb = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), lampBright);
+  lampBulb.position.y = -0.1;
+  const cord = new THREE.Group();
+  cord.position.set(0.13, -0.08, 0);
+  cord.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, -0.3, 0)]), lampEdge));
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), lampBright);
+  bead.position.y = -0.32;
+  cord.add(bead);
+  /* a generous invisible box to click, since the cord is only a dot or two wide from back here */
+  const lampHit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.6), new THREE.MeshBasicMaterial({ visible: false }));
+  lampHit.position.y = -0.22;
+  lampHit.userData.lamp = true;
+  pickables.push(lampHit);
+  lamp.add(lampRod, lampShade, lampCap, lampRing(0.18, -0.12), lampRing(0.06, 0.12), lampBulb, cord, lampHit);
+  lamp.visible = false;
+  lampShade.userData.stageOnly = true;
+  lampCap.userData.stageOnly = true;
+  scene.add(lamp);
   [
     [1.9, 1.96],
     [1.62, 1.66],
@@ -774,6 +883,7 @@ export const createPianoScene = (
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.003;
     ring.receiveShadow = true;
+    ring.userData.stageOnly = true;
     scene.add(ring);
   });
   ([
@@ -801,11 +911,54 @@ export const createPianoScene = (
   const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: 0xbbbbbb, size: 1, sizeAttenuation: false }));
   scene.add(motes);
 
+  const colourWorld = createColourWorld({
+    renderer,
+    scene,
+    piano,
+    bench,
+    cam,
+    metronome,
+    lamp,
+    cord,
+    lampBulb,
+    bead,
+    centre: V(HOME.wide.target.x, 0, HOME.wide.target.z),
+    outline: OUTER_PTS,
+    legs: [
+      [-0.64, -0.1],
+      [0.64, -0.1],
+      [-0.42, -1.58],
+    ],
+    stringPositions: stringPts,
+    bassStrings: 12,
+    inkLine: INK_LINE,
+    mats: {
+      lacquer,
+      lid: lidMat,
+      ivory,
+      whiteKeys: whiteKeys.material as THREE.Material,
+      ebony,
+      blackKeys: blackKeys.material as THREE.Material,
+      plate: plateMat,
+      board: boardMat,
+      brass,
+      walnut,
+      paper,
+      silver,
+      cover: coverMat,
+      name: nameMat,
+      rug: rugMat,
+      roleBars: roleBars.material as THREE.Material,
+    },
+    seat,
+    lights: { spot, hemi, rim, bounce, house },
+  });
+
   /* ── state ── */
   let W = 1;
   let H = 1;
   let narrow = false;
-  let px = 3;
+  let px = 2; // screen pixels per dither dot
   let hovered: PartId | null = null;
   /* free orbit around the piano: azimuth (around), polar (up/down), distance (zoom) */
   type Orbit = { az: number; pol: number; dist: number };
@@ -828,7 +981,19 @@ export const createPianoScene = (
     orbit = { ...orbitDefault };
     orbitGoal = { ...orbitDefault };
     orbitReady = true;
+    placeLamp();
   };
+  /* hang the lamp straight above the orbit's centre, so it stays top-centre however the piano is turned, at the
+     height that puts it just inside the top of the frame when the camera is backed all the way off */
+  function placeLamp() {
+    const h = narrow ? HOME.narrow : HOME.wide;
+    const pol = new THREE.Spherical().setFromVector3(h.pos.clone().sub(h.target)).phi;
+    const d = distMax();
+    const r = d * Math.sin(pol);
+    const v = d * Math.cos(pol);
+    const want = -(Math.PI / 2 - pol) + THREE.MathUtils.degToRad(h.fov / 2) * 0.86;
+    lamp.position.set(h.target.x, h.target.y + v + r * Math.tan(want), h.target.z);
+  }
   const pressed = new Map<number, number>(); // midi → 0..1, a brief tap from the pointer
   const keyDepth = new Map<number, number>(); // midi → how far down the key is, 0..1
   const WHITE_AT = new Map(WHITE_KEYS.map((k, i) => [k.midi, i]));
@@ -900,38 +1065,32 @@ export const createPianoScene = (
     const pos = centre.clone().addScaledVector(face, d * 0.95).add(V(0, d * 0.18, 0));
     return { pos, target: centre, off: 1 };
   };
-  /* the intro: lights out, looking down from the bass side on the closed lid, so the lettering (which glows on
-     its own) is the first thing there. The light flickers up like a stage lamp, then the camera glides round to
-     the usual view while the lid swings up onto its prop */
-  const LIGHTS: [THREE.Light, number][] = [
-    [spot, 170],
-    [rim, 1.4],
-    [bounce, 5],
-    [hemi, 0.1],
-  ];
-  const setLights = (level: number) => LIGHTS.forEach(([l, full]) => (l.intensity = full * level));
-  const FLICKER: [number, number][] = [
-    [0, 0],
-    [380, 0.3],
-    [460, 0.04],
-    [600, 0.55],
-    [690, 0.2],
-    [880, 1],
-  ];
-  let intro: { t0: number; flown: boolean; done: () => void } | null = null;
-  const introView = (): View => {
-    setLid(0);
-    const centre = lid.localToWorld(V(NAME_SPOT.x, 0.025, NAME_SPOT.z));
-    const k = narrow ? 1.7 : 1;
-    return { pos: centre.clone().add(V(-1.0 * k, 2.45 * k, 0)), target: centre, off: 0 };
-  };
-  const endIntro = () => {
-    if (!intro) return;
-    const { done } = intro;
-    intro = null;
-    setLights(1);
-    setLid(LID_OPEN);
-    done();
+  /* the intro: sand.ts draws it over the canvas. Meanwhile the piano holds still on the overview, lid up and lights
+     on, and a few frames in (once textures and shadows have settled) hands over the frame it drew as dots, so the
+     sand can land on exactly those */
+  let intro: { frames: number; onDots: ((dots: IntroDots | null) => void) | null } | null = null;
+  /* the frame just drawn, read back off the canvas, which is the dot grid itself (one pixel per dot) unless the
+     room is in colour */
+  const readDots = (): IntroDots | null => {
+    if (hiRes) return null;
+    const gl = renderer.getContext();
+    const w = renderer.domElement.width;
+    const h = renderer.domElement.height;
+    const raw = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, raw);
+    const on = new Uint8Array(w * h);
+    let light: [number, number, number] | null = null;
+    let dark: [number, number, number] | null = null;
+    for (let r = 0; r < h; r += 1) {
+      for (let c = 0; c < w; c += 1) {
+        const i = (r * w + c) * 4;
+        const lit = raw[i] > 128;
+        on[(h - 1 - r) * w + c] = lit ? 1 : 0; // GL rows run bottom up
+        if (lit && !light) light = [raw[i], raw[i + 1], raw[i + 2]];
+        if (!lit && !dark) dark = [raw[i], raw[i + 1], raw[i + 2]];
+      }
+    }
+    return light && dark ? { w, h, on, light, dark } : null;
   };
 
   const closeView = (p: PartId): View =>
@@ -1033,6 +1192,36 @@ export const createPianoScene = (
   let elapsed = 0;
   let raf = 0;
 
+  /* the house lights: how far the colour has spread (0 = all stage, 1 = all room), the change in progress, and
+     whether the canvas is drawn at full sharpness (only needed once colour is involved) */
+  let wave = 0;
+  let colourOn = false;
+  let shift: { t0: number; on: boolean; onTurn: (colour: boolean) => void; turned: boolean } | null = null;
+  let hiRes = false;
+  let lampVis = 0;
+  let lampHintAt: number | null = null;
+  let pullAt: number | null = null;
+  const lampPt = new THREE.Vector3();
+  const LAMP_FLICKER = [0.3, 1.15, 0.45, 1.25, 0.7, 1.1];
+  const applySize = () => {
+    const lw = Math.max(1, Math.round(W / px));
+    const lh = Math.max(1, Math.round(H / px));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ow = hiRes ? Math.round(W * dpr) : lw;
+    const oh = hiRes ? Math.round(H * dpr) : lh;
+    renderer.setSize(ow, oh, false);
+    target.setSize(lw, lh);
+    colourTarget.setSize(hiRes ? ow : 4, hiRes ? oh : 4);
+    (ditherMat.uniforms.lowRes.value as THREE.Vector2).set(lw, lh);
+    (ditherMat.uniforms.outRes.value as THREE.Vector2).set(ow, oh);
+  };
+  const setHiRes = (on: boolean) => {
+    if (hiRes === on) return;
+    hiRes = on;
+    applySize();
+  };
+  const smooth = THREE.MathUtils.smoothstep;
+
   const frame = () => {
     const dt = Math.min(0.05, clock.getDelta());
     elapsed += dt;
@@ -1094,7 +1283,7 @@ export const createPianoScene = (
         if (black) blackKeys.setMatrixAt(at, keyPose(true, x, next));
         else {
           whiteKeys.setMatrixAt(at, keyPose(false, x, next));
-          whiteKeys.setColorAt(at, keyTint.lerpColors(IVORY, FLIPPED_WHITE, next));
+          whiteKeys.setColorAt(at, keyTint.lerpColors(IVORY, PRESSED_WHITE, next));
         }
         moved = true;
       }
@@ -1161,21 +1350,6 @@ export const createPianoScene = (
     /* the notebook: the cover swinging on its spine, then any page turns queued up behind it */
     const now = performance.now();
     if (nameDots.step(now)) nameTex.needsUpdate = true;
-    if (intro) {
-      const t = now - intro.t0;
-      let level = 0;
-      FLICKER.forEach(([at, v]) => {
-        if (t >= at) level = v;
-      });
-      setLights(level);
-      setLid(LID_OPEN * ease(Math.min(1, Math.max(0, (t - 900) / 1300))));
-      if (!intro.flown && t >= 650) {
-        intro.flown = true;
-        orbit = { ...orbitGoal };
-        flyView(homeView(), undefined, 1700);
-      }
-      if (t >= 2400 && !tween) endIntro();
-    }
 
     if (coverAnim && now >= coverAnim.t0) {
       const p = Math.min(1, (now - coverAnim.t0) / coverAnim.dur);
@@ -1264,6 +1438,64 @@ export const createPianoScene = (
     fog.near = camDist + 0.8;
     fog.far = camDist + 5.5;
 
+    /* the lamp only comes into view with the camera backed right off, round the piano and not from overhead */
+    const tNow = performance.now();
+    const free = !tween && resting === null && !intro && !concert && !bookMode;
+    const lampWant = free ? smooth(orbit.dist, distMax() * 0.84, distMax() * 0.97) * smooth(orbit.pol, 0.7, 0.9) : 0;
+    lampVis += (lampWant - lampVis) * (reduceMotion ? 1 : Math.min(1, dt * 6));
+    if (lampVis > 0.6 && lampHintAt === null) lampHintAt = tNow;
+    let lampAlpha = lampVis;
+    /* the first time it shows, it stutters on like a bulb warming, the only hint that it does anything */
+    if (lampHintAt !== null && !reduceMotion) {
+      const k = Math.floor((tNow - lampHintAt) / 90);
+      if (k < 7) lampAlpha *= k % 2 ? 0.25 : 1;
+    }
+    lamp.visible = lampVis > 0.01;
+    lampBody.opacity = lampAlpha;
+    lampEdge.opacity = lampAlpha;
+    lampBright.opacity = lampAlpha;
+    if (pullAt !== null) {
+      const p = (tNow - pullAt) / 380;
+      cord.position.y = -0.08 - 0.07 * Math.sin(Math.PI * Math.min(1, p));
+      if (p >= 1) pullAt = null;
+    }
+
+    let flick = 1;
+    if (shift) {
+      const e = tNow - shift.t0;
+      if (shift.on) {
+        if (e > 160 && e < 700) flick = LAMP_FLICKER[Math.min(LAMP_FLICKER.length - 1, Math.floor((e - 160) / 90))];
+        const w = Math.min(1, Math.max(0, (e - 700) / 2000));
+        wave = w * w * (3 - 2 * w);
+        if (!shift.turned && e > 1500) {
+          shift.turned = true;
+          shift.onTurn(true);
+        }
+        if (w >= 1) shift = null;
+      } else {
+        if (!shift.turned) {
+          shift.turned = true;
+          shift.onTurn(false);
+        }
+        const w = Math.min(1, Math.max(0, (e - 200) / 1400));
+        wave = 1 - w * w * (3 - 2 * w);
+        /* and once it's dark again, the stage light catches */
+        if (e > 1650 && e < 2100) flick = LAMP_FLICKER[Math.min(LAMP_FLICKER.length - 1, Math.floor((e - 1650) / 75))];
+        if (e >= 2100) {
+          shift = null;
+          setHiRes(false);
+        }
+      }
+    }
+    if (shift || (wave > 0 && wave < 1)) {
+      lamp.updateMatrixWorld(true);
+      lampBulb.getWorldPosition(lampPt).project(camera);
+      (ditherMat.uniforms.origin.value as THREE.Vector2).set((lampPt.x + 1) / 2, (lampPt.y + 1) / 2);
+    }
+    ditherMat.uniforms.flick.value = flick;
+    ditherMat.uniforms.wave.value = wave;
+    ditherMat.uniforms.grainSeed.value = (frameNo % 97) * 13.7;
+
     const goal = resting
       ? { pt: resting === 'name' ? nameCentre() : ANCHORS[resting], r: 0.34, s: 0.62 }
       : hovered
@@ -1309,9 +1541,23 @@ export const createPianoScene = (
     INK_LINE.color.lerpColors(INK_FAR, INK_NEAR, Math.min(1, Math.max(0, (lineDots - 0.45) / 1.1)));
 
     if (!hidden) {
-      renderer.render(scene, camera);
+      if (wave < 1) renderer.render(scene, camera);
+      if (wave > 0) {
+        const keepLine = INK_LINE.color.clone();
+        INK_LINE.color.copy(INK_NEAR);
+        colourWorld.enter(camera);
+        renderer.setRenderTarget(colourTarget);
+        renderer.render(scene, camera);
+        colourWorld.leave();
+        INK_LINE.color.copy(keepLine);
+      }
       renderer.setRenderTarget(null);
       renderer.render(post, postCam);
+      if (intro?.onDots && (intro.frames -= 1) <= 0) {
+        const hand = intro.onDots;
+        intro.onDots = null;
+        hand(readDots());
+      }
     }
 
     const points = {} as Record<PartId, ScreenPoint>;
@@ -1407,12 +1653,10 @@ export const createPianoScene = (
       H = h;
       const flipped = narrow !== isNarrow || !orbitReady;
       narrow = isNarrow;
-      px = isNarrow ? 2 : 3;
+      px = 2;
       if (flipped) resetOrbit();
-      const lw = Math.max(1, Math.round(w / px));
-      const lh = Math.max(1, Math.round(h / px));
-      renderer.setSize(lw, lh, false);
-      target.setSize(lw, lh);
+      applySize();
+      placeLamp();
       camera.aspect = w / h;
       if (!tween && !intro) {
         const v = concert ? concertView(performance.now()) : bookMode ? bookView() : resting ? closeView(resting) : homeView();
@@ -1426,13 +1670,32 @@ export const createPianoScene = (
       const rect = canvas.getBoundingClientRect();
       ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
-      const hit = raycaster.intersectObjects(pickables, false)[0];
-      if (!hit) return { part: null, midi: null, camera: false, book: false };
+      /* the lamp only counts once it can be seen; until then it's not in the way of anything behind it */
+      const hit = raycaster.intersectObjects(pickables, false).find((h) => !h.object.userData.lamp || lampVis > 0.5);
+      if (!hit) return { part: null, midi: null, camera: false, book: false, lamp: false };
+      if (hit.object.userData.lamp) return { part: null, midi: null, camera: false, book: false, lamp: true };
       const part = (hit.object.userData.part as PartId) ?? null;
       let midi: number | null = null;
       if (hit.object === whiteKeys && hit.instanceId !== undefined) midi = WHITE_KEYS[hit.instanceId].midi;
       if (hit.object === blackKeys && hit.instanceId !== undefined) midi = BLACK_KEYS[hit.instanceId].midi;
-      return { part, midi, camera: hit.object.userData.camera === true, book: hit.object.userData.book === true };
+      return { part, midi, camera: hit.object.userData.camera === true, book: hit.object.userData.book === true, lamp: false };
+    },
+    pullLamp(onTurn) {
+      if (shift) return;
+      const now = performance.now();
+      pullAt = now;
+      colourOn = !colourOn;
+      if (colourOn) setHiRes(true);
+      lamp.updateMatrixWorld(true);
+      lampBulb.getWorldPosition(lampPt).project(camera);
+      (ditherMat.uniforms.origin.value as THREE.Vector2).set((lampPt.x + 1) / 2, (lampPt.y + 1) / 2);
+      if (reduceMotion) {
+        wave = colourOn ? 1 : 0;
+        if (!colourOn) setHiRes(false);
+        onTurn(colourOn);
+        return;
+      }
+      shift = { t0: now, on: colourOn, onTurn, turned: false };
     },
     setHover(part) {
       if (part === hovered) return;
@@ -1485,28 +1748,22 @@ export const createPianoScene = (
     setRole(index) {
       roleHot = index;
     },
-    playIntro(onDone) {
+    playIntro(onDots) {
       if (reduceMotion) {
-        onDone();
+        onDots(null);
         return;
       }
-      const start = introView();
-      tween = null;
-      cur.pos.copy(start.pos);
-      cur.target.copy(start.target);
-      cur.off = 0;
-      setLights(0);
-      intro = { t0: performance.now(), flown: false, done: onDone };
-    },
-    skipIntro() {
-      if (!intro) return;
       tween = null;
       orbit = { ...orbitGoal };
       const home = homeView();
       cur.pos.copy(home.pos);
       cur.target.copy(home.target);
       cur.off = 0;
-      endIntro();
+      setLid(LID_OPEN);
+      intro = { frames: 3, onDots };
+    },
+    endIntro() {
+      intro = null;
     },
     flyIntoLens(onDone) {
       piano.updateMatrixWorld(true);
@@ -1539,9 +1796,13 @@ export const createPianoScene = (
     },
     flyTo(part, onDone) {
       if (!part) orbit = { ...orbitGoal };
-      if (part !== 'name') nameDots.setGlyph(null);
+      if (part !== 'name') nameDots.setName(false);
       resting = part;
-      flyView(part ? closeView(part) : homeView(), onDone);
+      flyView(part ? closeView(part) : homeView(), () => {
+        /* written in once the camera has arrived to watch */
+        if (part === 'name' && resting === 'name') nameDots.setName(true);
+        onDone?.();
+      });
     },
     openBook(onOpen) {
       bookMode = true;
@@ -1601,6 +1862,8 @@ export const createPianoScene = (
       cancelAnimationFrame(raf);
       renderer.dispose();
       target.dispose();
+      colourTarget.dispose();
+      colourWorld.leave();
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         m.geometry?.dispose();

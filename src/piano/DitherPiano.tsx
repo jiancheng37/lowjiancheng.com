@@ -5,6 +5,8 @@ import { developPhoto, STILL } from './dither';
 import { GALLERY, Photo } from './gallery';
 import { BookContext, dissolve, layoutNotebook, NotebookPageView, quadTransform, setDotMask } from './Notebook';
 import { OFF_KEYS } from './offKeys';
+import { createPianoSound } from './pianoSound';
+import { playSand, SandRun } from './sand';
 import { counterDigits, useVisitor } from './visitor';
 import { THOUGHTS } from './thoughts';
 
@@ -628,6 +630,7 @@ const fromHash = (): PartId | null => {
   const h = window.location.hash.replace('#', '') as PartId;
   return PART_IDS.includes(h) ? h : null;
 };
+const introAtStart = () => window.location.hash !== '#gallery' && !fromHash() && wantsIntro();
 
 const DitherPiano: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -638,6 +641,16 @@ const DitherPiano: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement>(null);
   const points = useRef<Record<PartId, ScreenPoint> | null>(null);
   const lastMidi = useRef<number | null>(null);
+  /* the piano's voice: keys sound as the pointer runs over them, unless a song is playing or it's muted */
+  const sound = useMemo(() => createPianoSound(), []);
+  const [muted, setMuted] = useState(() => {
+    try {
+      return window.localStorage.getItem('jc-muted') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const lastMove = useRef<{ x: number; y: number; t: number; v: number } | null>(null);
 
   const [narrow, setNarrow] = useState(() => window.innerWidth / window.innerHeight < 0.85);
   const [phase, setPhase] = useState<Phase>('home');
@@ -648,12 +661,40 @@ const DitherPiano: React.FC = () => {
   /* concert mode: while a song plays, the camera settles on the keys and everything else gets out of the way */
   const [concert, setConcert] = useState(false);
   const [concertHint, setConcertHint] = useState(false);
-  /* the first-visit intro: playing, then a moment where the labels switch on, then gone */
-  const [intro, setIntro] = useState<'off' | 'playing' | 'lit'>('off');
+  const playingRef = useRef(false);
+  playingRef.current = playing;
+  useEffect(() => {
+    sound.setMuted(muted);
+    try {
+      window.localStorage.setItem('jc-muted', muted ? '1' : '0');
+    } catch {
+      /* fine: it just won't be remembered */
+    }
+  }, [muted, sound]);
+  /* audio may only start from a click, tap or key press */
+  useEffect(() => {
+    const wake = () => sound.unlock();
+    window.addEventListener('pointerdown', wake, true);
+    window.addEventListener('keydown', wake, true);
+    return () => {
+      window.removeEventListener('pointerdown', wake, true);
+      window.removeEventListener('keydown', wake, true);
+    };
+  }, [sound]);
+  /* the first-visit intro: playing, then a moment where the labels switch on, then gone. It's decided before the
+     first paint, so the sand's dark plate covers the piano from the very first frame */
+  const [intro, setIntro] = useState<'off' | 'playing' | 'lit'>(() => (introAtStart() ? 'playing' : 'off'));
+  const introFirst = useRef(intro === 'playing');
+  const sandRef = useRef<HTMLCanvasElement>(null);
+  const skipIntro = useRef<() => void>(() => {});
   const visitor = useVisitor();
   const [room, setRoom] = useState<Room>('closed');
   const [developing, setDeveloping] = useState(false);
   const [camHover, setCamHover] = useState(false);
+  /* the house lamp, up out of shot: hovering its cord, and whether its lights are on (the page in colour) */
+  const [lampHover, setLampHover] = useState(false);
+  const [colour, setColour] = useState(false);
+  const [turning, setTurning] = useState(false);
   const roomRef = useRef(room);
   roomRef.current = room;
   const activeRef = useRef(active);
@@ -693,6 +734,10 @@ const DitherPiano: React.FC = () => {
   const pinch = useRef<number | null>(null);
   const suppressClick = useRef(false);
   const audios = useRef(new Map<string, HTMLAudioElement>());
+  /* mute covers the songs too */
+  useEffect(() => {
+    audios.current.forEach((a) => (a.muted = muted));
+  }, [muted]);
   const tracks = useRef(new Map<string, SongTrack>());
   const [songId, setSongId] = useState(SONGS[0].id);
   const songIdRef = useRef(songId);
@@ -869,9 +914,14 @@ const DitherPiano: React.FC = () => {
           setRoom('open');
         }
       });
-    } else if (wantsIntro()) {
-      setIntro('playing');
-      scene.playIntro(() => {
+    } else if (introFirst.current) {
+      /* sand on a plate (sand.ts), settling dot for dot into the scene's first frame. Skip ends it where it is */
+      let run: SandRun | null = null;
+      let ended = false;
+      const finish = () => {
+        if (ended) return;
+        ended = true;
+        scene.endIntro();
         try {
           window.localStorage.setItem('jc-intro', '1');
         } catch {
@@ -879,6 +929,13 @@ const DitherPiano: React.FC = () => {
         }
         setIntro('lit');
         window.setTimeout(() => setIntro('off'), 1800);
+      };
+      skipIntro.current = () => (run ? run.skip() : finish());
+      scene.playIntro((dots) => {
+        const plate = sandRef.current;
+        if (ended) return;
+        if (!dots || !plate) finish();
+        else run = playSand(plate, dots, finish);
       });
     }
     return () => {
@@ -910,6 +967,7 @@ const DitherPiano: React.FC = () => {
     if (!a) {
       a = new Audio(songUrl(song.id, 'mp3'));
       a.preload = 'auto';
+      a.muted = muted;
       a.addEventListener('ended', () => endSong(song.id));
       audios.current.set(song.id, a);
     }
@@ -1162,7 +1220,7 @@ const DitherPiano: React.FC = () => {
 
   useEffect(() => {
     if (intro !== 'playing') return undefined;
-    const skip = () => sceneRef.current?.skipIntro();
+    const skip = () => skipIntro.current();
     const events = ['pointerdown', 'wheel', 'keydown'] as const;
     events.forEach((ev) => window.addEventListener(ev, skip, { passive: true }));
     return () => events.forEach((ev) => window.removeEventListener(ev, skip));
@@ -1290,11 +1348,34 @@ const DitherPiano: React.FC = () => {
     }
   };
 
+  /* a key under the pointer: it dips, and sounds as hard as the pointer was moving. While a song plays the keys are
+     the song's, so nothing else sounds */
+  const strike = (midi: number) => {
+    sceneRef.current?.pressKey(midi);
+    if (playingRef.current) return;
+    const m = lastMove.current;
+    const speed = m ? m.v : 0;
+    sound.play(midi, Math.min(0.95, 0.32 + speed * 0.22));
+  };
+  const hoverKeys = (midi: number | null) => {
+    if (midi !== null && midi !== lastMidi.current) strike(midi);
+    lastMidi.current = midi;
+  };
+
   const onPointerMove = (e: React.PointerEvent) => {
     const scene = sceneRef.current;
     if (!scene) return;
+    const t = performance.now();
+    const lm = lastMove.current;
+    const v = lm ? Math.hypot(e.clientX - lm.x, e.clientY - lm.y) / Math.max(8, t - lm.t) : 0;
+    lastMove.current = { x: e.clientX, y: e.clientY, t, v: lm ? lm.v * 0.5 + v * 0.5 : v };
     const prev = pointers.current.get(e.pointerId);
     if (prev) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    /* the about page sits over the keyboard: run a finger along it */
+    if (phase === 'open' && active === 'about' && e.pointerType === 'mouse') {
+      hoverKeys(scene.pick(e.clientX, e.clientY).midi);
+      return;
+    }
     if (phase !== 'home') {
       if (phase === 'open' && active === 'off' && room === 'closed' && bookState === 'closed') {
         const hit = scene.pick(e.clientX, e.clientY);
@@ -1323,12 +1404,10 @@ const DitherPiano: React.FC = () => {
         return;
       }
     }
-    const { part, midi } = scene.pick(e.clientX, e.clientY);
+    const { part, midi, lamp } = scene.pick(e.clientX, e.clientY);
+    if (lamp !== lampHover) setLampHover(lamp);
     if (part !== hover) hoverPart(part);
-    if (midi !== null && midi !== lastMidi.current) {
-      scene.pressKey(midi);
-    }
-    lastMidi.current = midi;
+    hoverKeys(midi);
   };
 
   const onCanvasClick = (e: React.MouseEvent) => {
@@ -1349,7 +1428,15 @@ const DitherPiano: React.FC = () => {
       return;
     }
     if (phase !== 'home') return;
-    const { part } = sceneRef.current!.pick(e.clientX, e.clientY);
+    const { part, lamp } = sceneRef.current!.pick(e.clientX, e.clientY);
+    if (lamp) {
+      sceneRef.current!.pullLamp((on) => {
+        setTurning(true);
+        setColour(on);
+        window.setTimeout(() => setTurning(false), 1200);
+      });
+      return;
+    }
     if (part) open(part);
   };
 
@@ -1391,12 +1478,12 @@ const DitherPiano: React.FC = () => {
     <div
       className={`onebit phase-${phase}${narrow ? ' is-narrow' : ''}${hover ? ' has-hover' : ''}${
         intro === 'playing' ? ' is-intro' : intro === 'lit' ? ' is-lit' : ''
-      }${concert ? ' is-concert' : ''}`}
+      }${concert ? ' is-concert' : ''}${colour ? ' is-colour' : ''}${turning ? ' is-turning' : ''}`}
     >
       <canvas
         ref={canvasRef}
         className="screen"
-        style={{ cursor: dragging ? 'grabbing' : hover || camHover || bookHover ? 'pointer' : phase === 'home' ? 'grab' : 'default' }}
+        style={{ cursor: dragging ? 'grabbing' : hover || camHover || bookHover || (lampHover && phase === 'home') ? 'pointer' : phase === 'home' ? 'grab' : 'default' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -1409,6 +1496,7 @@ const DitherPiano: React.FC = () => {
         aria-label="A grand piano under a stage light. Drag to turn it, scroll to zoom. Each part of the piano opens a page."
         role="img"
       />
+      {intro === 'playing' && <canvas ref={sandRef} className="sand" aria-hidden="true" />}
 
       <svg className="leaders" aria-hidden="true">
         {SECTIONS.map((s) => (
@@ -1639,6 +1727,19 @@ const DitherPiano: React.FC = () => {
           <span className="song-label">
             {song.title} · {song.by}
           </span>
+        </button>
+        <button
+          type="button"
+          className={`mute${muted ? ' is-muted' : ''}`}
+          onClick={() => setMuted((m) => !m)}
+          aria-pressed={muted}
+          aria-label={muted ? 'Turn the sound on' : 'Mute the sound'}
+          title={muted ? 'sound off' : 'sound on'}
+        >
+          <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
+            <path d="M1 4 H4 L8 1 V11 L4 8 H1 Z" />
+            {muted ? <path className="mute-x" d="M10 4 L13 7 M13 4 L10 7" /> : <path className="mute-wave" d="M10 3.5 Q12 6 10 8.5 M11.5 2 Q14.5 6 11.5 10" />}
+          </svg>
         </button>
       </div>
 

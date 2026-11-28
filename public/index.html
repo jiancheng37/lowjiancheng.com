@@ -30,6 +30,16 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!-- worn ink: a grainy, uneven fill in the type, like a dry print -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <filter id="ink" x="-2%" y="-2%" width="104%" height="104%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="wobble" />
+        <feDisplacementMap in="SourceGraphic" in2="wobble" scale="0.8" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feTurbulence type="fractalNoise" baseFrequency="2.6" numOctaves="1" seed="7" result="grit" />
+        <feColorMatrix in="grit" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3 0 0 0 -0.55" result="holes" />
+        <feComposite in="rough" in2="holes" operator="in" />
+      </filter>
+    </svg>
     <div id="root"></div>
     <!--
       This HTML file is a template.
